@@ -1,0 +1,1183 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>云间引渡（Github代理）</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: rgba(22, 27, 34, 0.92);
+      --panel: rgba(13, 17, 23, 0.74);
+      --panel-strong: rgba(10, 14, 20, 0.42);
+      --border: #30363d;
+      --border-soft: rgba(255, 255, 255, 0.06);
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --blue: #1f6feb;
+      --blue-soft: rgba(68, 128, 255, 0.18);
+      --green: #238636;
+      --green-soft: rgba(74, 192, 96, 0.16);
+      --orange: #d29922;
+      --orange-soft: rgba(223, 180, 86, 0.16);
+      --danger: #f85149;
+      --shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      --radius-lg: 18px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(31, 111, 235, 0.18), transparent 38%),
+        linear-gradient(180deg, #0d1117 0%, #0b0f14 100%);
+      overflow: auto;
+    }
+
+    .app {
+      min-height: 100dvh;
+      padding: 10px;
+    }
+
+    .shell {
+      min-height: calc(100dvh - 20px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .hero {
+      text-align: center;
+      padding-bottom: 2px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.2;
+      letter-spacing: 0.08em;
+    }
+
+    .workspace {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border: 1px solid var(--border-soft);
+      border-radius: 16px;
+      background: var(--panel-strong);
+    }
+
+    .section-label,
+    .module-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #dfe7f1;
+      font-size: 15px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .section-label::before,
+    .module-label::before {
+      content: "|";
+      color: #4b5667;
+      letter-spacing: 0;
+    }
+
+    .fields {
+      display: grid;
+      gap: 10px;
+    }
+
+    .field {
+      display: grid;
+      grid-template-columns: 56px minmax(0, 1fr);
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .field-label {
+      display: flex;
+      align-items: center;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .control {
+      min-width: 0;
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: rgba(13, 17, 23, 0.9);
+      overflow: hidden;
+    }
+
+    .control--output {
+      color: #66707c;
+    }
+
+    .control-input,
+    .control-output {
+      width: 100%;
+      min-width: 0;
+      flex: 1;
+      border: 0;
+      outline: none;
+      background: transparent;
+      color: var(--text);
+      font-size: 15px;
+      padding: 0;
+    }
+
+    .control-input::placeholder {
+      color: #66707c;
+    }
+
+    .control-output {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .control-output.placeholder {
+      color: #66707c;
+    }
+
+    .result-status {
+      position: absolute;
+      right: 48px;
+      top: 50%;
+      transform: translateY(-50%);
+      min-width: 0;
+      color: #d8dee9;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      pointer-events: none;
+    }
+
+    .result-status.show {
+      opacity: 1;
+    }
+
+    .icon-btn {
+      appearance: none;
+      border: 1px solid rgba(120, 153, 212, 0.36);
+      background: rgba(255, 255, 255, 0.03);
+      color: #cdd9eb;
+      border-radius: 999px;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+      flex: 0 0 auto;
+    }
+
+    .icon-btn:hover:not(:disabled) {
+      border-color: rgba(145, 180, 245, 0.62);
+      color: #f2f7ff;
+      background: rgba(120, 153, 212, 0.16);
+      transform: translateY(-1px);
+    }
+
+    .icon-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .icon-btn svg {
+      width: 13px;
+      height: 13px;
+      stroke: currentColor;
+      stroke-width: 1.7;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      flex: 0 0 auto;
+    }
+
+    .action-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid #2a313c;
+      border-radius: 14px;
+      padding: 14px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1;
+      cursor: pointer;
+      color: #e3eaf3;
+      background: linear-gradient(180deg, #171b23 0%, #10151c 100%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+      transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-primary { border-color: rgba(74, 192, 96, 0.32); }
+    .btn-primary:hover { border-color: rgba(74, 192, 96, 0.38); color: #f2fff4; }
+    .btn-warning { border-color: rgba(223, 180, 86, 0.32); }
+    .btn-warning:hover { border-color: rgba(223, 180, 86, 0.4); color: #fffaf0; }
+    .btn-secondary { border-color: rgba(68, 128, 255, 0.32); }
+    .btn-secondary:hover { border-color: rgba(68, 128, 255, 0.38); color: #f2f6ff; }
+
+    .btn-inline {
+      appearance: none;
+      border: 1px solid #2f3642;
+      background: rgba(15, 21, 30, 0.8);
+      color: #d8e1ee;
+      border-radius: 10px;
+      padding: 6px 10px;
+      font-size: 12px;
+      line-height: 1;
+      cursor: pointer;
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .btn-inline:hover {
+      border-color: rgba(68, 128, 255, 0.5);
+      color: #eef4ff;
+    }
+
+    .btn-inline.danger:hover {
+      border-color: rgba(248, 81, 73, 0.5);
+      color: #ffe9e8;
+    }
+
+    .section {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border-soft);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      padding-bottom: 2px;
+    }
+
+    .tabs::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+    }
+
+    .tab-btn {
+      appearance: none;
+      flex: 0 0 auto;
+      white-space: nowrap;
+      border: 1px solid #2f3642;
+      background: rgba(15, 21, 30, 0.8);
+      color: #c4ccd8;
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 13px;
+      line-height: 1;
+      cursor: pointer;
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .tab-btn.active {
+      border-color: rgba(68, 128, 255, 0.55);
+      color: #eef4ff;
+      background: rgba(68, 128, 255, 0.18);
+    }
+
+    .panel {
+      flex: 1;
+      min-height: 0;
+      display: none;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      background: var(--panel);
+    }
+
+    .panel.active {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border-soft);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .panel-meta code {
+      color: #c9d1d9;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    .panel-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .panel-scroll::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+    }
+
+    .history-list,
+    .mirror-list {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+    }
+
+    .empty-state {
+      margin: 10px;
+      padding: 16px;
+      border: 1px dashed rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      color: #7f8792;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .history-card,
+    .mirror-card {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.02);
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .history-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      justify-content: space-between;
+    }
+
+    .history-tag {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 30px;
+      height: 20px;
+      padding: 0 7px;
+      border-radius: 6px;
+      border: 1px solid rgba(139, 151, 170, 0.45);
+      background: rgba(255, 255, 255, 0.02);
+      color: #b8c2d2;
+      font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace;
+      font-size: 11px;
+      line-height: 1;
+      letter-spacing: 0.02em;
+    }
+
+    .history-time {
+      min-width: 0;
+      flex: 1;
+      font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.4;
+      color: #a8b3c4;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-source {
+      min-width: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      width: fit-content;
+      max-width: 100%;
+      font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.4;
+      color: #dce6f5;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-source > span {
+      min-width: 0;
+      flex: 0 1 auto;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .history-target-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      width: fit-content;
+      max-width: 100%;
+    }
+
+    .history-target {
+      min-width: 0;
+      flex: 0 1 auto;
+      font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.4;
+      color: #8fb2ff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-inline-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 1px;
+      flex: 0 0 auto;
+      white-space: nowrap;
+      margin-left: 1px;
+    }
+
+    .history-inline-link {
+      border: 0;
+      width: auto;
+      height: auto;
+      padding: 0;
+      color: #9ab9ff;
+      background: transparent;
+      font-size: 11px;
+      line-height: 1;
+      position: relative;
+      top: -2px;
+      margin-left: 0;
+      transform: none;
+      white-space: nowrap;
+      flex: 0 0 auto;
+      letter-spacing: 0;
+    }
+
+    .history-inline-link:hover:not(:disabled) {
+      color: #d6e6ff;
+      background: transparent;
+      transform: none;
+    }
+
+    .history-delete {
+      width: 24px;
+      height: 24px;
+      border-color: rgba(248, 81, 73, 0.36);
+      color: #ffd7d5;
+    }
+
+    .history-delete:hover:not(:disabled) {
+      border-color: rgba(248, 81, 73, 0.62);
+      color: #fff2f1;
+      background: rgba(248, 81, 73, 0.14);
+    }
+
+    .history-delete { flex: 0 0 auto; }
+
+    .mirror-name {
+      font-size: 14px;
+      color: #ecf2fc;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .mirror-url {
+      font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace;
+      font-size: 12px;
+      color: #8fb2ff;
+      word-break: break-all;
+    }
+
+    .mirror-note {
+      color: #8b949e;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    thead th {
+      text-align: left;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid var(--border-soft);
+      padding: 10px 12px;
+    }
+
+    tbody td {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 14px;
+      color: var(--text);
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .whitelist-host {
+      font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace;
+    }
+
+    th:first-child,
+    td:first-child {
+      width: 42px;
+      min-width: 42px;
+      max-width: 42px;
+      padding-right: 8px;
+      text-align: center;
+    }
+
+    @media (max-width: 640px) {
+      .app {
+        padding: 8px;
+      }
+
+      .shell {
+        min-height: calc(100dvh - 16px);
+        padding: 14px;
+        border-radius: 16px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      .workspace {
+        padding: 12px;
+      }
+
+      .field {
+        grid-template-columns: 46px minmax(0, 1fr);
+        gap: 8px;
+      }
+
+      .field-label {
+        font-size: 12px;
+      }
+
+      .control {
+        min-height: 48px;
+        padding: 0 12px;
+        gap: 8px;
+      }
+
+      .icon-btn {
+        width: 26px;
+        height: 26px;
+      }
+
+      .icon-btn svg {
+        width: 12px;
+        height: 12px;
+      }
+
+      .action-row {
+        gap: 8px;
+      }
+
+      .btn {
+        width: 100%;
+        padding: 13px 12px;
+      }
+
+      .tabs {
+        gap: 6px;
+      }
+
+      .tab-btn {
+        padding: 7px 10px;
+        font-size: 12px;
+      }
+
+      .panel-meta {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .btn-inline {
+        padding: 6px 4px;
+        font-size: 11px;
+      }
+
+      th:first-child,
+      td:first-child {
+        width: 34px;
+        min-width: 34px;
+        max-width: 34px;
+        padding-right: 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="shell">
+      <div class="hero">
+        <h1>云间引渡（Github代理）</h1>
+      </div>
+
+      <div class="workspace">
+        <div class="module-label">迁津</div>
+
+        <div class="fields">
+          <div class="field">
+            <span class="field-label">输入</span>
+            <div class="control">
+              <input
+                id="urlInput"
+                class="control-input"
+                type="text"
+                placeholder="例如：https://github.com/user/repo 或 raw.githubusercontent.com/user/repo/main/file.js"
+                autocomplete="off"
+              />
+              <button class="icon-btn" id="clearInputBtn" type="button" title="清空输入" aria-label="清空输入">
+                <svg viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M4 4l8 8" />
+                  <path d="M12 4l-8 8" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="field">
+            <span class="field-label">输出</span>
+            <div class="control control--output">
+              <span class="control-output" id="outputText">生成后的代理链接会显示在这里</span>
+              <button class="icon-btn" id="openOutputBtn" type="button" title="打开输出链接" aria-label="打开输出链接" disabled>
+                <svg viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M5 11L11 5" />
+                  <path d="M6.5 5H11V9.5" />
+                </svg>
+              </button>
+              <span id="toast" class="result-status" aria-live="polite"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="btn btn-primary" id="convertBtn" type="button">转换</button>
+          <button class="btn btn-warning" id="copyBtn" type="button">复制</button>
+          <button class="btn btn-secondary" id="openBtn" type="button">打开</button>
+        </div>
+
+        <div class="section">
+          <div class="module-label">嘉录</div>
+
+          <div class="tabs" id="tabs">
+            <button class="tab-btn active" type="button" data-tab="history">历史记录</button>
+            <button class="tab-btn" type="button" data-tab="mirrors">镜像推荐</button>
+            <button class="tab-btn" type="button" data-tab="whitelist">白名单</button>
+          </div>
+
+          <div class="panel active" data-panel="history">
+            <div class="panel-meta">
+              <div>记录数量：<code id="historyCount"></code></div>
+              <button class="btn-inline danger" id="clearHistoryBtn" type="button">清空历史</button>
+            </div>
+            <div class="panel-scroll">
+              <div class="history-list" id="historyList"></div>
+            </div>
+          </div>
+
+          <div class="panel" data-panel="mirrors">
+            <div class="panel-meta">
+              <div>推荐数量：<code id="mirrorCount"></code></div>
+              <div>可用性会随网络波动变化</div>
+            </div>
+            <div class="panel-scroll">
+              <div class="mirror-list" id="mirrorList"></div>
+            </div>
+          </div>
+
+          <div class="panel" data-panel="whitelist">
+            <div class="panel-meta">
+              <div>白名单数量：<code id="whitelistCount"></code></div>
+            </div>
+            <div class="panel-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>域名</th>
+                  </tr>
+                </thead>
+                <tbody id="whitelistBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const HISTORY_STORAGE_KEY = 'github_proxy_history_v1';
+    const state = {
+      proxyBaseHost: 'ssr.ddns-ip.net',
+      maxHistory: 40,
+      activeTab: 'history',
+      outputUrl: '',
+      histories: loadHistory(),
+      mirrors: [
+        { name: 'ghproxy', url: 'https://ghproxy.com/', note: '常见下载加速入口，可拼接 GitHub 资源地址使用' },
+        { name: 'ghproxy.net', url: 'https://ghproxy.net/', note: '备用加速入口，适合与主入口交替尝试' },
+        { name: 'ghfast.top', url: 'https://ghfast.top/', note: '下载链路常用镜像，网络波动时可尝试' },
+        { name: 'FastGit', url: 'https://hub.fastgit.xyz/', note: '社区常见镜像网关，稳定性会随时变化' }
+      ],
+      whitelist: [
+        'github.com',
+        'avatars.githubusercontent.com',
+        'github.githubassets.com',
+        'collector.github.com',
+        'api.github.com',
+        'raw.githubusercontent.com',
+        'gist.githubusercontent.com',
+        'github.io',
+        'assets-cdn.github.com',
+        'cdn.jsdelivr.net',
+        'securitylab.github.com',
+        'www.githubstatus.com',
+        'npmjs.com',
+        'git-lfs.github.com',
+        'githubusercontent.com',
+        'github.global.ssl.fastly.net',
+        'api.npms.io',
+        'github.community',
+        'desktop.github.com',
+        'central.github.com'
+      ]
+    };
+
+    const el = {
+      input: document.getElementById('urlInput'),
+      outputText: document.getElementById('outputText'),
+      openOutputBtn: document.getElementById('openOutputBtn'),
+      clearInputBtn: document.getElementById('clearInputBtn'),
+      convertBtn: document.getElementById('convertBtn'),
+      copyBtn: document.getElementById('copyBtn'),
+      openBtn: document.getElementById('openBtn'),
+      clearHistoryBtn: document.getElementById('clearHistoryBtn'),
+      tabs: document.getElementById('tabs'),
+      panels: Array.from(document.querySelectorAll('[data-panel]')),
+      tabButtons: Array.from(document.querySelectorAll('[data-tab]')),
+      historyList: document.getElementById('historyList'),
+      historyCount: document.getElementById('historyCount'),
+      mirrorCount: document.getElementById('mirrorCount'),
+      mirrorList: document.getElementById('mirrorList'),
+      whitelistCount: document.getElementById('whitelistCount'),
+      whitelistBody: document.getElementById('whitelistBody'),
+      toast: document.getElementById('toast')
+    };
+
+    function loadHistory() {
+      try {
+        const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter((item) => item && typeof item.input === 'string' && typeof item.proxy === 'string' && typeof item.time === 'number');
+      } catch (err) {
+        return [];
+      }
+    }
+
+    function persistHistory() {
+      try {
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(state.histories));
+      } catch (err) {}
+    }
+
+    function formatTime(ts) {
+      try {
+        return new Date(ts).toLocaleString('zh-CN', { hour12: false });
+      } catch (err) {
+        return '';
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function normalizeInput(value) {
+      return (value || '').trim();
+    }
+
+    function showToast(message) {
+      el.toast.textContent = message;
+      el.toast.classList.add('show');
+      window.clearTimeout(window.__toastTimer);
+      window.__toastTimer = window.setTimeout(() => {
+        el.toast.classList.remove('show');
+      }, 1200);
+    }
+
+    function setOutput(text, url) {
+      el.outputText.textContent = text;
+      el.outputText.classList.toggle('placeholder', !url);
+      state.outputUrl = url || '';
+      el.openOutputBtn.disabled = !url;
+      el.openOutputBtn.title = url ? '打开输出链接' : '暂无可打开链接';
+    }
+
+    function setTab(tab) {
+      state.activeTab = tab;
+      el.tabButtons.forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+      });
+      el.panels.forEach((panel) => {
+        panel.classList.toggle('active', panel.dataset.panel === tab);
+      });
+    }
+
+    function renderWhitelist() {
+      el.whitelistCount.textContent = String(state.whitelist.length);
+      el.whitelistBody.innerHTML = state.whitelist.map((domain, index) => (
+        `<tr><td>${index + 1}</td><td class="whitelist-host">${escapeHtml(domain)}</td></tr>`
+      )).join('');
+    }
+
+    function renderMirrors() {
+      el.mirrorCount.textContent = String(state.mirrors.length);
+      if (!state.mirrors.length) {
+        el.mirrorList.innerHTML = '<div class="empty-state">暂未配置镜像推荐。</div>';
+        return;
+      }
+      el.mirrorList.innerHTML = state.mirrors.map((item) => (
+        `<div class="mirror-card">
+          <div class="mirror-name">${escapeHtml(item.name)}</div>
+          <div class="mirror-url">${escapeHtml(item.url)}</div>
+          <div class="mirror-note">${escapeHtml(item.note)}</div>
+          <div class="history-actions">
+            <button class="btn-inline" type="button" data-mirror-action="open" data-url="${escapeHtml(item.url)}">打开</button>
+            <button class="btn-inline" type="button" data-mirror-action="copy" data-url="${escapeHtml(item.url)}">复制</button>
+          </div>
+        </div>`
+      )).join('');
+    }
+
+    function renderHistory() {
+      el.historyCount.textContent = String(state.histories.length);
+      if (!state.histories.length) {
+        el.historyList.innerHTML = '<div class="empty-state">暂无历史记录，转换成功后会自动保存到本地。</div>';
+        return;
+      }
+
+      el.historyList.innerHTML = state.histories.map((item, index) => (
+        `<article class="history-card">
+          <div class="history-head">
+            <span class="history-tag">#${index + 1}</span>
+            <span class="history-time">${escapeHtml(formatTime(item.time))}</span>
+            <button class="icon-btn history-delete" type="button" data-action="delete" data-index="${index}" title="删除记录" aria-label="删除记录">🗑</button>
+          </div>
+          <div class="history-source">
+            <span title="${escapeHtml(item.input)}">${escapeHtml(item.input)}</span>
+            <span class="history-inline-actions">
+              <button class="icon-btn history-inline-link" type="button" data-action="copy-source" data-index="${index}" title="复制原网址" aria-label="复制原网址">⧉</button>
+              <button class="icon-btn history-inline-link" type="button" data-action="open-source" data-index="${index}" title="打开原网址" aria-label="打开原网址">↗</button>
+            </span>
+          </div>
+          <div class="history-target-row">
+            <div class="history-target" title="${escapeHtml(item.proxy)}">${escapeHtml(item.proxy)}</div>
+            <span class="history-inline-actions">
+              <button class="icon-btn history-inline-link" type="button" data-action="copy-target" data-index="${index}" title="复制代理网址" aria-label="复制代理网址">⧉</button>
+              <button class="icon-btn history-inline-link" type="button" data-action="open-target" data-index="${index}" title="打开代理网址" aria-label="打开代理网址">↗</button>
+            </span>
+          </div>
+        </article>`
+      )).join('');
+    }
+
+    function saveHistory(input, proxy) {
+      const normalizedInput = normalizeInput(input);
+      const normalizedProxy = normalizeInput(proxy);
+      if (!normalizedInput || !normalizedProxy) return;
+
+      state.histories = state.histories.filter((item) => item.proxy !== normalizedProxy);
+      state.histories.push({ input: normalizedInput, proxy: normalizedProxy, time: Date.now() });
+      if (state.histories.length > state.maxHistory) {
+        state.histories = state.histories.slice(state.histories.length - state.maxHistory);
+      }
+      persistHistory();
+      renderHistory();
+    }
+
+    function removeHistory(index) {
+      if (!Number.isInteger(index) || index < 0 || index >= state.histories.length) return;
+      state.histories.splice(index, 1);
+      persistHistory();
+      renderHistory();
+    }
+
+    function clearHistory() {
+      state.histories = [];
+      persistHistory();
+      renderHistory();
+    }
+
+    function buildProxyUrl(input) {
+      if (!input) return null;
+
+      let raw = normalizeInput(input);
+      if (!raw) return null;
+      if (!/^https?:\/\//i.test(raw)) raw = `https://${raw}`;
+
+      try {
+        const url = new URL(raw);
+        const host = url.host.toLowerCase();
+        if (!state.whitelist.includes(host)) return null;
+
+        const proxyPrefix = `${host.replace(/\./g, '-')}-gh.`;
+        const proxy = new URL(url.href);
+        proxy.protocol = 'https:';
+        proxy.host = `${proxyPrefix}${state.proxyBaseHost}`;
+        return proxy.href;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    async function copyText(text) {
+      await navigator.clipboard.writeText(text);
+    }
+
+    async function convertUrl() {
+      const raw = normalizeInput(el.input.value);
+      if (!raw) {
+        setOutput('请先输入链接', null);
+        return null;
+      }
+
+      const localTarget = buildProxyUrl(raw);
+      if (location.protocol === 'file:' || !location.hostname) {
+        if (!localTarget) {
+          setOutput('链接无效，或当前域名不在白名单中', null);
+          return null;
+        }
+        setOutput(localTarget, localTarget);
+        saveHistory(raw, localTarget);
+        return localTarget;
+      }
+
+      const api = `/api/convert?url=${encodeURIComponent(raw)}`;
+      try {
+        const res = await fetch(api, { method: 'GET' });
+        const data = await res.json();
+        if (!res.ok || !data.ok || !data.proxy_url) {
+          if (localTarget) {
+            setOutput(localTarget, localTarget);
+            saveHistory(raw, localTarget);
+            return localTarget;
+          }
+          setOutput('链接无效，或当前域名不在白名单中', null);
+          return null;
+        }
+        setOutput(data.proxy_url, data.proxy_url);
+        saveHistory(raw, data.proxy_url);
+        return data.proxy_url;
+      } catch (err) {
+        if (localTarget) {
+          setOutput(localTarget, localTarget);
+          saveHistory(raw, localTarget);
+          return localTarget;
+        }
+        setOutput(`转换失败：${err.message}`, null);
+        return null;
+      }
+    }
+
+    async function openCurrentOutput() {
+      if (!state.outputUrl) {
+        showToast('暂无可打开链接');
+        return;
+      }
+      window.open(state.outputUrl, '_blank', 'noopener,noreferrer');
+    }
+
+    async function openConverted() {
+      const target = await convertUrl();
+      if (!target) return;
+      window.open(target, '_blank', 'noopener,noreferrer');
+    }
+
+    async function handleCopyCurrent() {
+      const target = await convertUrl();
+      if (!target) return;
+      try {
+        await copyText(target);
+        showToast('已复制');
+      } catch (err) {
+        showToast('复制失败');
+      }
+    }
+
+    el.convertBtn.addEventListener('click', convertUrl);
+    el.copyBtn.addEventListener('click', handleCopyCurrent);
+    el.openBtn.addEventListener('click', openConverted);
+    el.clearInputBtn.addEventListener('click', () => {
+      el.input.value = '';
+      el.input.focus();
+      setOutput('生成后的代理链接会显示在这里', null);
+    });
+    el.openOutputBtn.addEventListener('click', openCurrentOutput);
+    el.input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') openConverted();
+    });
+
+    el.tabs.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-tab]');
+      if (!button) return;
+      setTab(button.dataset.tab);
+    });
+
+    el.clearHistoryBtn.addEventListener('click', () => {
+      if (!state.histories.length) {
+        showToast('历史为空');
+        return;
+      }
+      if (!window.confirm('确认清空本地历史记录？')) return;
+      clearHistory();
+      showToast('已清空');
+    });
+
+    el.historyList.addEventListener('click', async (event) => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+      const index = Number(button.dataset.index);
+      const item = state.histories[index];
+      if (!item) return;
+
+      switch (button.dataset.action) {
+        case 'open-source':
+          window.open(item.input, '_blank', 'noopener,noreferrer');
+          break;
+        case 'copy-source':
+          try {
+            await copyText(item.input);
+            showToast('已复制');
+          } catch (err) {
+            showToast('复制失败');
+          }
+          break;
+        case 'open-target':
+          window.open(item.proxy, '_blank', 'noopener,noreferrer');
+          break;
+        case 'copy-target':
+          try {
+            await copyText(item.proxy);
+            showToast('已复制');
+          } catch (err) {
+            showToast('复制失败');
+          }
+          break;
+        case 'delete':
+          removeHistory(index);
+          showToast('已删除');
+          break;
+      }
+    });
+
+    el.mirrorList.addEventListener('click', async (event) => {
+      const button = event.target.closest('button[data-mirror-action]');
+      if (!button) return;
+      const url = button.dataset.url;
+      if (!url) return;
+
+      if (button.dataset.mirrorAction === 'open') {
+        window.open(url, '_blank', 'noopener,noreferrer');
+        return;
+      }
+
+      if (button.dataset.mirrorAction === 'copy') {
+        try {
+          await copyText(url);
+          showToast('已复制');
+        } catch (err) {
+          showToast('复制失败');
+        }
+      }
+    });
+
+    renderWhitelist();
+    renderMirrors();
+    renderHistory();
+    setTab('history');
+    setOutput('生成后的代理链接会显示在这里', null);
+  </script>
+</body>
+</html>

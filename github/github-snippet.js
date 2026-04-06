@@ -361,8 +361,30 @@ function modifyUrl(url_str, host_prefix, effective_hostname) {
 
 // 首页 HTML
 function renderHomePage(errorMessage = '', proxy_base_host = '<YOUR_DOMAIN>') {
-  const safeError = escapeHtml(errorMessage || '');
+  const safeErrorMessage = JSON.stringify(errorMessage || '');
   const safeWhitelist = JSON.stringify(domain_whitelist);
+  const safeMirrorRecommendations = JSON.stringify([
+    {
+      name: 'ghproxy',
+      url: 'https://ghproxy.com/',
+      note: '常见下载加速入口，可拼接 GitHub 资源地址使用'
+    },
+    {
+      name: 'ghproxy.net',
+      url: 'https://ghproxy.net/',
+      note: '备用加速入口，适合与主入口交替尝试'
+    },
+    {
+      name: 'ghfast.top',
+      url: 'https://ghfast.top/',
+      note: '下载链路常用镜像，网络波动时可尝试'
+    },
+    {
+      name: 'FastGit',
+      url: 'https://hub.fastgit.xyz/',
+      note: '社区常见镜像网关，稳定性会随时变化'
+    }
+  ]);
 
   return `<!doctype html>
 <html lang="zh-CN">
@@ -504,6 +526,7 @@ function renderHomePage(errorMessage = '', proxy_base_host = '<YOUR_DOMAIN>') {
     .output-value {
       width: 100%;
       min-width: 0;
+      flex: 1;
       color: var(--text);
       font-size: 15px;
       line-height: 1.4;
@@ -513,6 +536,38 @@ function renderHomePage(errorMessage = '', proxy_base_host = '<YOUR_DOMAIN>') {
     }
     .output-value.placeholder {
       color: #66707c;
+    }
+    .control.output-control {
+      position: relative;
+      gap: 10px;
+      padding-right: 12px;
+    }
+    .icon-btn {
+      appearance: none;
+      border: 1px solid rgba(120, 153, 212, 0.36);
+      background: rgba(255, 255, 255, 0.03);
+      color: #cdd9eb;
+      border-radius: 999px;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+    }
+    .icon-btn:hover:not(:disabled) {
+      border-color: rgba(145, 180, 245, 0.62);
+      color: #f2f7ff;
+      background: rgba(120, 153, 212, 0.16);
+      transform: translateY(-1px);
+    }
+    .icon-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
     }
     input[type="text"] {
       width: 100%;
@@ -558,28 +613,22 @@ function renderHomePage(errorMessage = '', proxy_base_host = '<YOUR_DOMAIN>') {
       border-color: rgba(223,180,86,0.4);
       color: #fffaf0;
     }
-    .btn-ghost {
-      background: transparent;
-      border: 1px solid #2a313c;
-      color: #c4ccd8;
-      box-shadow: none;
-    }
-    .btn-ghost:hover {
-      background: rgba(255,255,255,0.04);
-      border-color: #3a4250;
-    }
     button:hover {
       transform: translateY(-1px);
     }
     .result-status {
-      min-width: 72px;
-      text-align: right;
+      position: absolute;
+      right: 48px;
+      top: 50%;
+      transform: translateY(-50%);
+      min-width: 0;
       color: #d8dee9;
       font-size: 12px;
       letter-spacing: 0.04em;
       white-space: nowrap;
       opacity: 0;
       transition: opacity 0.2s ease;
+      pointer-events: none;
     }
     .result-status.show {
       opacity: 1;
@@ -612,7 +661,30 @@ function renderHomePage(errorMessage = '', proxy_base_host = '<YOUR_DOMAIN>') {
       font-size: 16px;
       letter-spacing: 0.2px;
     }
-    .whitelist-panel {
+    .tab-nav {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      appearance: none;
+      border: 1px solid #2f3642;
+      background: rgba(15,21,30,0.8);
+      color: #c4ccd8;
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 13px;
+      line-height: 1;
+      cursor: pointer;
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+    .tab-btn.active {
+      border-color: rgba(68,128,255,0.55);
+      color: #eef4ff;
+      background: rgba(68,128,255,0.18);
+    }
+    .panel {
       display: block;
       border: 1px solid var(--border);
       border-radius: 14px;
@@ -621,7 +693,10 @@ function renderHomePage(errorMessage = '', proxy_base_host = '<YOUR_DOMAIN>') {
       flex: 1;
       min-height: 0;
     }
-    .whitelist-meta {
+    .panel:not(.active) {
+      display: none;
+    }
+    .panel-meta {
       display: flex;
       justify-content: space-between;
       gap: 10px;
@@ -631,19 +706,20 @@ function renderHomePage(errorMessage = '', proxy_base_host = '<YOUR_DOMAIN>') {
       color: var(--muted);
       font-size: 13px;
     }
-    .whitelist-meta code {
+    .panel-meta code {
       color: #c9d1d9;
       background: rgba(255,255,255,0.04);
       padding: 2px 6px;
       border-radius: 6px;
     }
-    .whitelist-table-wrap {
+    .panel-scroll {
+      flex: 1;
+      min-height: 0;
       overflow: auto;
-      max-height: calc(100vh - 470px);
       scrollbar-width: none;
       -ms-overflow-style: none;
     }
-    .whitelist-table-wrap::-webkit-scrollbar {
+    .panel-scroll::-webkit-scrollbar {
       width: 0;
       height: 0;
     }
@@ -676,6 +752,207 @@ function renderHomePage(errorMessage = '', proxy_base_host = '<YOUR_DOMAIN>') {
     .whitelist-host {
       font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace;
     }
+    .history-list,
+    .mirror-list {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+    }
+
+    .empty-state {
+      margin: 10px;
+      padding: 16px;
+      border: 1px dashed rgba(255,255,255,0.12);
+      border-radius: 12px;
+      color: #7f8792;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .history-card,
+    .mirror-card {
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.02);
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .history-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      justify-content: space-between;
+    }
+
+    .history-tag {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 30px;
+      height: 20px;
+      padding: 0 7px;
+      border-radius: 6px;
+      border: 1px solid rgba(139, 151, 170, 0.45);
+      background: rgba(255, 255, 255, 0.02);
+      color: #b8c2d2;
+      font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace;
+      font-size: 11px;
+      line-height: 1;
+      letter-spacing: 0.02em;
+    }
+
+    .history-time {
+      min-width: 0;
+      flex: 1;
+      font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.4;
+      color: #a8b3c4;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-source {
+      min-width: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      width: fit-content;
+      max-width: 100%;
+      font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.4;
+      color: #dce6f5;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-source > span {
+      min-width: 0;
+      flex: 0 1 auto;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .history-target-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      width: fit-content;
+      max-width: 100%;
+    }
+
+    .history-target {
+      min-width: 0;
+      flex: 0 1 auto;
+      font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.4;
+      color: #8fb2ff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-inline-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 1px;
+      flex: 0 0 auto;
+      white-space: nowrap;
+      margin-left: 1px;
+    }
+
+    .history-inline-link {
+      border: 0;
+      width: auto;
+      height: auto;
+      padding: 0;
+      color: #9ab9ff;
+      background: transparent;
+      font-size: 11px;
+      line-height: 1;
+      position: relative;
+      top: -2px;
+      margin-left: 0;
+      transform: none;
+      white-space: nowrap;
+      flex: 0 0 auto;
+      letter-spacing: 0;
+    }
+
+    .history-inline-link:hover:not(:disabled) {
+      color: #d6e6ff;
+      background: transparent;
+      transform: none;
+    }
+
+    .history-delete {
+      width: 24px;
+      height: 24px;
+      border-color: rgba(248, 81, 73, 0.36);
+      color: #ffd7d5;
+      flex: 0 0 auto;
+    }
+
+    .history-delete:hover:not(:disabled) {
+      border-color: rgba(248, 81, 73, 0.62);
+      color: #fff2f1;
+      background: rgba(248, 81, 73, 0.14);
+    }
+
+    .history-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-inline {
+      appearance: none;
+      border: 1px solid #2f3642;
+      background: rgba(15,21,30,0.8);
+      color: #d8e1ee;
+      border-radius: 10px;
+      padding: 6px 10px;
+      font-size: 12px;
+      line-height: 1;
+      cursor: pointer;
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+    .btn-inline:hover {
+      border-color: rgba(68,128,255,0.5);
+      color: #eef4ff;
+    }
+    .btn-inline.danger:hover {
+      border-color: rgba(248,81,73,0.5);
+      color: #ffe9e8;
+    }
+
+    .mirror-name {
+      font-size: 14px;
+      color: #ecf2fc;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .mirror-url {
+      font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace;
+      font-size: 12px;
+      color: #8fb2ff;
+      word-break: break-all;
+    }
+    .mirror-note {
+      color: #8b949e;
+      font-size: 12px;
+      line-height: 1.4;
+    }
     th:first-child,
     td:first-child {
       width: 42px;
@@ -702,6 +979,10 @@ function renderHomePage(errorMessage = '', proxy_base_host = '<YOUR_DOMAIN>') {
       .label {
         padding-left: 0;
       }
+      .icon-btn {
+        width: 26px;
+        height: 26px;
+      }
       .actions {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -710,15 +991,21 @@ function renderHomePage(errorMessage = '', proxy_base_host = '<YOUR_DOMAIN>') {
       button {
         width: 100%;
       }
-      .whitelist-meta {
+      .panel-meta {
         flex-direction: column;
       }
-      .whitelist-table-wrap {
-        max-height: calc(100vh - 390px);
+      .tab-nav {
+        gap: 6px;
+      }
+      .tab-btn {
+        padding: 7px 10px;
       }
       thead th,
       tbody td {
         padding: 8px 10px;
+      }
+      .history-actions {
+        gap: 6px;
       }
       th:first-child,
       td:first-child {
@@ -748,6 +1035,7 @@ function renderHomePage(errorMessage = '', proxy_base_host = '<YOUR_DOMAIN>') {
               placeholder="例如：https://github.com/user/repo 或 raw.githubusercontent.com/user/repo/main/file.js"
               autocomplete="off"
             />
+            <button class="icon-btn" id="clearInputBtn" type="button" title="清空输入" aria-label="清空输入">×</button>
           </div>
         </div>
 
@@ -755,6 +1043,7 @@ function renderHomePage(errorMessage = '', proxy_base_host = '<YOUR_DOMAIN>') {
           <span class="label">输出</span>
           <div class="control output-control">
             <span class="output-value placeholder" id="result">生成后的代理链接会显示在这里</span>
+            <button class="icon-btn" id="openOutputBtn" type="button" title="打开输出链接" aria-label="打开输出链接" disabled>↗</button>
             <span class="result-status" id="toast" aria-live="polite"></span>
           </div>
         </div>
@@ -770,11 +1059,37 @@ function renderHomePage(errorMessage = '', proxy_base_host = '<YOUR_DOMAIN>') {
             <div class="section-title"><strong>嘉录</strong></div>
           </div>
 
-          <div class="whitelist-panel" id="whitelistPanel">
-            <div class="whitelist-meta">
+          <div class="tab-nav" id="tabNav">
+            <button class="tab-btn active" type="button" data-tab="history">历史记录</button>
+            <button class="tab-btn" type="button" data-tab="mirrors">镜像推荐</button>
+            <button class="tab-btn" type="button" data-tab="whitelist">白名单</button>
+          </div>
+
+          <div class="panel active" data-panel="history">
+            <div class="panel-meta">
+              <div>记录数量：<code id="historyCount"></code></div>
+              <button class="btn-inline danger" id="clearHistoryBtn" type="button">清空历史</button>
+            </div>
+            <div class="panel-scroll">
+              <div class="history-list" id="historyList"></div>
+            </div>
+          </div>
+
+          <div class="panel" data-panel="mirrors">
+            <div class="panel-meta">
+              <div>推荐数量：<code id="mirrorCount"></code></div>
+              <div>可用性会随网络波动变化</div>
+            </div>
+            <div class="panel-scroll">
+              <div class="mirror-list" id="mirrorList"></div>
+            </div>
+          </div>
+
+          <div class="panel" data-panel="whitelist">
+            <div class="panel-meta">
               <div>白名单数量：<code id="whitelistCount"></code></div>
             </div>
-            <div class="whitelist-table-wrap">
+            <div class="panel-scroll">
               <table>
                 <thead>
                   <tr>
@@ -794,15 +1109,172 @@ function renderHomePage(errorMessage = '', proxy_base_host = '<YOUR_DOMAIN>') {
   <script>
     const input = document.getElementById('url');
     const result = document.getElementById('result');
+    const clearInputBtn = document.getElementById('clearInputBtn');
+    const openOutputBtn = document.getElementById('openOutputBtn');
+    const tabNav = document.getElementById('tabNav');
+    const tabButtons = Array.from(tabNav.querySelectorAll('.tab-btn'));
+    const panels = Array.from(document.querySelectorAll('[data-panel]'));
+    const historyList = document.getElementById('historyList');
+    const historyCount = document.getElementById('historyCount');
+    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+    const mirrorCount = document.getElementById('mirrorCount');
+    const mirrorList = document.getElementById('mirrorList');
     const whitelistBody = document.getElementById('whitelistBody');
-    const whitelistPanel = document.getElementById('whitelistPanel');
     const whitelistCount = document.getElementById('whitelistCount');
     const toast = document.getElementById('toast');
+    const errorMessage = ${safeErrorMessage};
     const whitelist = ${safeWhitelist};
+    const mirrorRecommendations = ${safeMirrorRecommendations};
     const proxyBaseHost = ${JSON.stringify(proxy_base_host)};
+    const historyStorageKey = 'github_proxy_history_v1';
+    const maxHistoryItems = 40;
+    let currentOutputUrl = '';
+
+    let historyRecords = loadHistory();
 
     function normalizeInput(v) {
       return (v || '').trim();
+    }
+
+    function escapeText(v) {
+      return String(v || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function loadHistory() {
+      try {
+        const raw = localStorage.getItem(historyStorageKey);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter(function (item) {
+          return item && typeof item.input === 'string' && typeof item.proxy === 'string' && typeof item.time === 'number';
+        });
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function persistHistory() {
+      try {
+        localStorage.setItem(historyStorageKey, JSON.stringify(historyRecords));
+      } catch (e) {}
+    }
+
+    function formatTime(ts) {
+      try {
+        return new Date(ts).toLocaleString('zh-CN', { hour12: false });
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function saveHistory(inputUrl, proxyUrl) {
+      if (!inputUrl || !proxyUrl) return;
+
+      const normalizedInput = String(inputUrl).trim();
+      const normalizedProxy = String(proxyUrl).trim();
+      if (!normalizedInput || !normalizedProxy) return;
+
+      historyRecords = historyRecords.filter(function (item) {
+        return item.proxy !== normalizedProxy;
+      });
+
+      historyRecords.unshift({
+        input: normalizedInput,
+        proxy: normalizedProxy,
+        time: Date.now()
+      });
+
+      if (historyRecords.length > maxHistoryItems) {
+        historyRecords = historyRecords.slice(0, maxHistoryItems);
+      }
+
+      persistHistory();
+      renderHistory();
+    }
+
+    function removeHistoryByIndex(index) {
+      if (!Number.isInteger(index) || index < 0 || index >= historyRecords.length) return;
+      historyRecords.splice(index, 1);
+      persistHistory();
+      renderHistory();
+    }
+
+    function clearHistory() {
+      historyRecords = [];
+      persistHistory();
+      renderHistory();
+    }
+
+    function renderHistory() {
+      historyCount.textContent = String(historyRecords.length);
+
+      if (!historyRecords.length) {
+        historyList.innerHTML = '<div class="empty-state">暂无历史记录，转换成功后会自动保存到本地。</div>';
+        return;
+      }
+
+      historyList.innerHTML = historyRecords.map(function (item, index) {
+        return '<article class="history-card">' +
+          '<div class="history-head">' +
+            '<span class="history-tag">#' + (index + 1) + '</span>' +
+            '<span class="history-time">' + escapeText(formatTime(item.time)) + '</span>' +
+            '<button class="icon-btn history-delete" type="button" data-action="delete" data-index="' + index + '" title="删除记录" aria-label="删除记录">🗑</button>' +
+          '</div>' +
+          '<div class="history-source">' +
+            '<span title="' + escapeText(item.input) + '">' + escapeText(item.input) + '</span>' +
+            '<span class="history-inline-actions">' +
+              '<button class="icon-btn history-inline-link" type="button" data-action="copy-source" data-index="' + index + '" title="复制原网址" aria-label="复制原网址">⧉</button>' +
+              '<button class="icon-btn history-inline-link" type="button" data-action="open-source" data-index="' + index + '" title="打开原网址" aria-label="打开原网址">↗</button>' +
+            '</span>' +
+          '</div>' +
+          '<div class="history-target-row">' +
+            '<div class="history-target" title="' + escapeText(item.proxy) + '">' + escapeText(item.proxy) + '</div>' +
+            '<span class="history-inline-actions">' +
+              '<button class="icon-btn history-inline-link" type="button" data-action="copy-target" data-index="' + index + '" title="复制代理网址" aria-label="复制代理网址">⧉</button>' +
+              '<button class="icon-btn history-inline-link" type="button" data-action="open-target" data-index="' + index + '" title="打开代理网址" aria-label="打开代理网址">↗</button>' +
+            '</span>' +
+          '</div>' +
+        '</article>';
+      }).join('');
+    }
+
+    function renderMirrors() {
+      mirrorCount.textContent = String(mirrorRecommendations.length);
+
+      if (!mirrorRecommendations.length) {
+        mirrorList.innerHTML = '<div class="empty-state">暂未配置镜像推荐。</div>';
+        return;
+      }
+
+      mirrorList.innerHTML = mirrorRecommendations.map(function (item) {
+        const name = escapeText(item && item.name ? item.name : '-');
+        const url = escapeText(item && item.url ? item.url : '-');
+        const note = escapeText(item && item.note ? item.note : '');
+        return '<div class="mirror-card">' +
+          '<div class="mirror-name">' + name + '</div>' +
+          '<div class="mirror-url">' + url + '</div>' +
+          '<div class="mirror-note">' + note + '</div>' +
+          '<div class="history-actions">' +
+            '<button class="btn-inline" type="button" data-mirror-action="open" data-url="' + url + '">打开</button>' +
+            '<button class="btn-inline" type="button" data-mirror-action="copy" data-url="' + url + '">复制</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function setActiveTab(tab) {
+      tabButtons.forEach(function (btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
+      });
+      panels.forEach(function (panel) {
+        panel.classList.toggle('active', panel.getAttribute('data-panel') === tab);
+      });
     }
 
     function buildProxyUrl(input) {
@@ -842,9 +1314,12 @@ function renderHomePage(errorMessage = '', proxy_base_host = '<YOUR_DOMAIN>') {
       }).join('');
     }
 
-    function setOutput(text, isPlaceholder) {
+    function setOutput(text, isPlaceholder, outputUrl) {
       result.textContent = text;
       result.classList.toggle('placeholder', !!isPlaceholder);
+      currentOutputUrl = outputUrl || '';
+      openOutputBtn.disabled = !currentOutputUrl;
+      openOutputBtn.title = currentOutputUrl ? '打开输出链接' : '暂无可打开链接';
     }
 
     function showToast(text) {
@@ -859,17 +1334,18 @@ function renderHomePage(errorMessage = '', proxy_base_host = '<YOUR_DOMAIN>') {
     async function convertUrl() {
       const raw = normalizeInput(input.value);
       if (!raw) {
-        setOutput('请先输入链接', true);
+        setOutput('请先输入链接', true, '');
         return null;
       }
 
       const localTarget = buildProxyUrl(raw);
       if (location.protocol === 'file:' || !location.hostname || location.hostname === '') {
         if (!localTarget) {
-          setOutput('链接无效，或当前域名不在白名单中', true);
+          setOutput('链接无效，或当前域名不在白名单中', true, '');
           return null;
         }
-        setOutput(localTarget, false);
+        setOutput(localTarget, false, localTarget);
+        saveHistory(raw, localTarget);
         return localTarget;
       }
 
@@ -879,20 +1355,23 @@ function renderHomePage(errorMessage = '', proxy_base_host = '<YOUR_DOMAIN>') {
         const data = await res.json();
         if (!res.ok || !data.ok || !data.proxy_url) {
           if (localTarget) {
-            setOutput(localTarget, false);
+            setOutput(localTarget, false, localTarget);
+            saveHistory(raw, localTarget);
             return localTarget;
           }
-          setOutput('链接无效，或当前域名不在白名单中', true);
+          setOutput('链接无效，或当前域名不在白名单中', true, '');
           return null;
         }
-        setOutput(data.proxy_url, false);
+        setOutput(data.proxy_url, false, data.proxy_url);
+        saveHistory(raw, data.proxy_url);
         return data.proxy_url;
       } catch (e) {
         if (localTarget) {
-          setOutput(localTarget, false);
+          setOutput(localTarget, false, localTarget);
+          saveHistory(raw, localTarget);
           return localTarget;
         }
-        setOutput('转换失败：' + e.message, true);
+        setOutput('转换失败：' + e.message, true, '');
         return null;
       }
     }
@@ -930,13 +1409,120 @@ function renderHomePage(errorMessage = '', proxy_base_host = '<YOUR_DOMAIN>') {
       }
     }
 
+    function openCurrentOutput() {
+      if (!currentOutputUrl) {
+        showToast('暂无可打开链接');
+        return;
+      }
+      window.open(currentOutputUrl, '_blank', 'noopener,noreferrer');
+    }
+
     input.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') {
         openProxy();
       }
     });
 
+    clearInputBtn.addEventListener('click', function () {
+      input.value = '';
+      input.focus();
+      setOutput('生成后的代理链接会显示在这里', true, '');
+    });
+
+    openOutputBtn.addEventListener('click', openCurrentOutput);
+
+    tabNav.addEventListener('click', function (event) {
+      const btn = event.target.closest('button[data-tab]');
+      if (!btn) return;
+      setActiveTab(btn.getAttribute('data-tab'));
+    });
+
+    clearHistoryBtn.addEventListener('click', function () {
+      if (!historyRecords.length) {
+        showToast('历史为空');
+        return;
+      }
+      if (!window.confirm('确认清空本地历史记录？')) return;
+      clearHistory();
+      showToast('已清空');
+    });
+
+    historyList.addEventListener('click', async function (event) {
+      const btn = event.target.closest('button[data-action]');
+      if (!btn) return;
+
+      const index = Number(btn.getAttribute('data-index'));
+      const item = historyRecords[index];
+      if (!item) return;
+
+      const action = btn.getAttribute('data-action');
+      if (action === 'open-source') {
+        window.open(item.input, '_blank', 'noopener,noreferrer');
+        return;
+      }
+
+      if (action === 'copy-source') {
+        try {
+          await navigator.clipboard.writeText(item.input);
+          showToast('已复制');
+        } catch (e) {
+          showToast('复制失败');
+        }
+        return;
+      }
+
+      if (action === 'open-target') {
+        window.open(item.proxy, '_blank', 'noopener,noreferrer');
+        return;
+      }
+
+      if (action === 'copy-target') {
+        try {
+          await navigator.clipboard.writeText(item.proxy);
+          showToast('已复制');
+        } catch (e) {
+          showToast('复制失败');
+        }
+        return;
+      }
+
+      if (action === 'delete') {
+        removeHistoryByIndex(index);
+        showToast('已删除');
+      }
+    });
+
+    mirrorList.addEventListener('click', async function (event) {
+      const btn = event.target.closest('button[data-mirror-action]');
+      if (!btn) return;
+
+      const action = btn.getAttribute('data-mirror-action');
+      const targetUrl = btn.getAttribute('data-url') || '';
+      if (!targetUrl) return;
+
+      if (action === 'open') {
+        window.open(targetUrl, '_blank', 'noopener,noreferrer');
+        return;
+      }
+
+      if (action === 'copy') {
+        try {
+          await navigator.clipboard.writeText(targetUrl);
+          showToast('已复制');
+        } catch (e) {
+          showToast('复制失败');
+        }
+      }
+    });
+
     renderWhitelist();
+    renderMirrors();
+    renderHistory();
+    setActiveTab('history');
+
+    if (errorMessage) {
+      setOutput(errorMessage, true);
+    }
   </script>
 </body>
 </html>`;
