@@ -26,7 +26,9 @@ const FEEDS = [
   {
     id: "csdn-geeknews",
     name: "CSDN · 极客日报",
-    url: "https://rsshub.pseudoyu.com/csdn/blog/csdngeeknews",
+    // url: "https://rsshub.pseudoyu.com/csdn/blog/csdngeeknews",
+    url: "https://rsshub.rssforever.com/bilibili/ranking/all",
+    
   },
   {
     id: "bilibili-hot",
