@@ -136,6 +136,25 @@ function buildImageUrl(type, index) {
 }
 
 /**
+ * 生成不缓存随机入口的 302 重定向响应
+ * 真实图片 URL 仍然可以由源站/CDN 正常缓存
+ *
+ * @param {string} imageUrl
+ * @returns {Response}
+ */
+function createNoCacheRedirect(imageUrl) {
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: imageUrl,
+      'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+      Pragma: 'no-cache',
+      Expires: '0',
+    },
+  });
+}
+
+/**
  * 生成横图的 302 重定向响应
  * 
  * @param {{h: number, v: number}} counts
@@ -144,7 +163,7 @@ function buildImageUrl(type, index) {
 function createHorizontalRedirect(counts) {
   const index = getRandomInt(counts.h);
   const imageUrl = buildImageUrl('h', index);
-  return Response.redirect(imageUrl, 302);
+  return createNoCacheRedirect(imageUrl);
 }
 
 /**
@@ -156,7 +175,7 @@ function createHorizontalRedirect(counts) {
 function createVerticalRedirect(counts) {
   const index = getRandomInt(counts.v);
   const imageUrl = buildImageUrl('v', index);
-  return Response.redirect(imageUrl, 302);
+  return createNoCacheRedirect(imageUrl);
 }
 
 /**
