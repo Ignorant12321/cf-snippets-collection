@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RSS Sources</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f7f5ef;
+      --fg: #202124;
+      --muted: #6f6a60;
+      --line: #d8d2c4;
+      --accent: #0f766e;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #171817;
+        --fg: #f1eee6;
+        --muted: #aaa398;
+        --line: #38362f;
+        --accent: #5eead4;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--fg);
+      font: 16px/1.6 ui-serif, Georgia, "Times New Roman", serif;
+    }
+
+    main {
+      width: min(720px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 72px 0;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(2rem, 8vw, 4.25rem);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .intro {
+      margin: 0 0 40px;
+      color: var(--muted);
+    }
+
+    .sources {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .source a {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      min-height: 64px;
+      padding: 16px 0;
+      color: inherit;
+      text-decoration: none;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .source a:hover span,
+    .source a:focus-visible span {
+      color: var(--accent);
+    }
+
+    code {
+      flex: none;
+      color: var(--muted);
+      font: 0.875rem/1.4 ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    footer {
+      margin-top: 40px;
+      color: var(--muted);
+      font-size: 0.875rem;
+    }
+
+    footer a {
+      color: inherit;
+      text-decoration-color: var(--line);
+      text-underline-offset: 4px;
+    }
+
+    @media (max-width: 520px) {
+      main {
+        width: min(100% - 28px, 720px);
+        padding: 44px 0;
+      }
+
+      .source a {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 4px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>RSS Sources</h1>
+    <p class="intro">当前入口支持 4 个订阅源。</p>
+    <ul class="sources">
+      <li class="source">
+        <a href="/rss?source=zaobao-china">
+          <span>联合早报 · 中国</span>
+          <code>zaobao-china</code>
+        </a>
+      </li>
+      <li class="source">
+        <a href="/rss?source=zaobao-world">
+          <span>联合早报 · 国际</span>
+          <code>zaobao-world</code>
+        </a>
+      </li>
+      <li class="source">
+        <a href="/rss?source=csdn-geeknews">
+          <span>CSDN · 极客日报</span>
+          <code>csdn-geeknews</code>
+        </a>
+      </li>
+      <li class="source">
+        <a href="/rss?source=bilibili-hot">
+          <span>bilibili 排行榜 · 全站</span>
+          <code>bilibili-hot</code>
+        </a>
+      </li>
+    </ul>
+    <footer>
+      JSON: <a href="/rss/sources">/rss/sources</a>
+    </footer>
+  </main>
+</body>
+</html>
