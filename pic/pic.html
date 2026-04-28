@@ -356,7 +356,7 @@
     <div class="preview" id="preview">
       <img
         id="previewImage"
-        src="https://pic.ssr.ddns-ip.net/h"
+        src="/h"
         alt="随机横图预览"
         loading="eager"
         decoding="async"
@@ -371,7 +371,7 @@
             <span>横图</span>
             <code>/h</code>
           </button>
-          <a class="external" href="https://pic.ssr.ddns-ip.net/h" target="_blank" rel="noopener" aria-label="新窗口打开横图 API">
+          <a class="external" href="/h" target="_blank" rel="noopener" aria-label="新窗口打开横图 API">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7"></path><path d="M9 7h8v8"></path></svg>
           </a>
         </div>
@@ -380,7 +380,7 @@
             <span>竖图</span>
             <code>/v</code>
           </button>
-          <a class="external" href="https://pic.ssr.ddns-ip.net/v" target="_blank" rel="noopener" aria-label="新窗口打开竖图 API">
+          <a class="external" href="/v" target="_blank" rel="noopener" aria-label="新窗口打开竖图 API">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7"></path><path d="M9 7h8v8"></path></svg>
           </a>
         </div>
@@ -389,7 +389,7 @@
             <span>随机</span>
             <code>/r</code>
           </button>
-          <a class="external" href="https://pic.ssr.ddns-ip.net/r" target="_blank" rel="noopener" aria-label="新窗口打开随机 API">
+          <a class="external" href="/r" target="_blank" rel="noopener" aria-label="新窗口打开随机 API">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7"></path><path d="M9 7h8v8"></path></svg>
           </a>
         </div>
@@ -401,14 +401,15 @@
       </p>
 
       <div class="fine-links" aria-label="相关链接">
-        <a href="https://pic.ssr.ddns-ip.net/random.js">random.js</a>
-        <a href="https://pic.ssr.ddns-ip.net/gallery.html">gallery.html</a>
+        <a href="/random.js">random.js</a>
+        <a href="/gallery.html">gallery.html</a>
       </div>
     </section>
   </main>
 
   <script>
-    const baseUrl = 'https://pic.ssr.ddns-ip.net';
+    const fallbackBaseUrl = 'https://pic.ssr.ddns-ip.net';
+    const baseUrl = window.location.protocol === 'file:' ? fallbackBaseUrl : window.location.origin;
     const labels = {
       '/h': '横图',
       '/v': '竖图',
