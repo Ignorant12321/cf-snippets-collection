@@ -58,7 +58,8 @@ async function handleRequest(request) {
   const url = new URL(request.url);
   const pathname = normalizePath(url.pathname);
 
-  if (pathname !== CONFIG.path && pathname !== `${CONFIG.path}/sources`) {
+  const allowedPaths = [CONFIG.path, `${CONFIG.path}/sources`, "/"];
+  if (!allowedPaths.includes(pathname)) {
     return new Response("Not Found", { status: 404 });
   }
 
@@ -272,6 +273,7 @@ function renderHomePage(request) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RSS Sources</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230f766e'/%3E%3Ccircle cx='10' cy='22' r='3' fill='white'/%3E%3Cpath d='M6 12a14 14 0 0 1 14 14h-4a10 10 0 0 0-10-10z' fill='white'/%3E%3Cpath d='M6 6a20 20 0 0 1 20 20h-4a16 16 0 0 0-16-16z' fill='white'/%3E%3C/svg%3E" type="image/svg+xml">
   <style>
     :root {
       color-scheme: light dark;
