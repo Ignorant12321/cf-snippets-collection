@@ -20,6 +20,23 @@ test('home page keeps the primary action to opening the generated proxy link', a
   assert.doesNotMatch(html, /id="convertBtn"|id="copyBtn"|>转换<|>复制</);
 });
 
+test('home page includes a favicon for the GitHub proxy project', async () => {
+  const { default: snippet } = await loadSnippet();
+  const response = await snippet.fetch(new Request('https://home-gh.ssr.ddns-ip.net/'));
+  const html = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.match(html, /<link rel="icon"[^>]+type="image\/svg\+xml"/);
+  assert.match(html, /viewBox='0 0 32 32'/);
+});
+
+test('static GitHub project page includes the same favicon', async () => {
+  const html = await readFile(new URL('./github.html', import.meta.url), 'utf8');
+
+  assert.match(html, /<link rel="icon"[^>]+type="image\/svg\+xml"/);
+  assert.match(html, /viewBox='0 0 32 32'/);
+});
+
 test('snippet source stays within Cloudflare 32KB limit', async () => {
   const source = await readFile(snippetUrl, 'utf8');
 

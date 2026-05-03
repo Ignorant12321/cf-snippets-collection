@@ -39,6 +39,11 @@ const CONFIG = {
       name: "bilibili 排行榜 · 全站",
       route: "/bilibili/ranking/all",
     },
+    {
+      id: "ruanyifeng-blog",
+      name: "阮一峰的网络日志",
+      url: "https://www.ruanyifeng.com/blog/atom.xml",
+    },
   ],
 };
 
@@ -58,7 +63,8 @@ async function handleRequest(request) {
   const url = new URL(request.url);
   const pathname = normalizePath(url.pathname);
 
-  if (pathname !== CONFIG.path && pathname !== `${CONFIG.path}/sources`) {
+  const allowedPaths = [CONFIG.path, `${CONFIG.path}/sources`, "/"];
+  if (!allowedPaths.includes(pathname)) {
     return new Response("Not Found", { status: 404 });
   }
 
@@ -70,7 +76,7 @@ async function handleRequest(request) {
     return jsonResponse(
       request,
       { ok: false, error: "Method Not Allowed" },
-      405
+      405,
     );
   }
 
@@ -97,7 +103,7 @@ async function handleRequest(request) {
         error: "Invalid source",
         available_sources: CONFIG.feeds.map((item) => item.id),
       },
-      400
+      400,
     );
   }
 
@@ -110,7 +116,8 @@ async function proxyFeed(request, source, feed) {
       method: "GET",
       headers: {
         "User-Agent": CONFIG.userAgent,
-        Accept: "application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8",
+        Accept:
+          "application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8",
       },
       cf: {
         cacheTtl: CONFIG.edgeCacheTtlSeconds,
@@ -126,7 +133,7 @@ async function proxyFeed(request, source, feed) {
           error: `Upstream error: ${upstream.status}`,
           source,
         },
-        502
+        502,
       );
     }
 
@@ -134,9 +141,12 @@ async function proxyFeed(request, source, feed) {
 
     headers.set(
       "Content-Type",
-      upstream.headers.get("Content-Type") || "application/xml; charset=UTF-8"
+      upstream.headers.get("Content-Type") || "application/xml; charset=UTF-8",
     );
-    headers.set("Cache-Control", `public, max-age=${CONFIG.edgeCacheTtlSeconds}`);
+    headers.set(
+      "Cache-Control",
+      `public, max-age=${CONFIG.edgeCacheTtlSeconds}`,
+    );
     headers.set("X-RSS-Source", source);
 
     applyCors(headers, request);
@@ -155,7 +165,7 @@ async function proxyFeed(request, source, feed) {
         error: "Fetch RSS failed",
         detail: message,
       },
-      502
+      502,
     );
   }
 }
@@ -272,6 +282,7 @@ function renderHomePage(request) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RSS Sources</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230f766e'/%3E%3Ccircle cx='10' cy='22' r='3' fill='white'/%3E%3Cpath d='M6 12a14 14 0 0 1 14 14h-4a10 10 0 0 0-10-10z' fill='white'/%3E%3Cpath d='M6 6a20 20 0 0 1 20 20h-4a16 16 0 0 0-16-16z' fill='white'/%3E%3C/svg%3E" type="image/svg+xml">
   <style>
     :root {
       color-scheme: light dark;
