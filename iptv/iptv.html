@@ -70,7 +70,9 @@
     .top-actions,
     .tabs,
     .info-row,
-    .actions {
+    .actions,
+    .panel-title,
+    .head-actions {
       display: flex;
       align-items: center;
     }
@@ -81,7 +83,8 @@
     }
 
     .top-actions,
-    .actions {
+    .actions,
+    .head-actions {
       gap: 8px;
     }
 
@@ -122,6 +125,11 @@
       text-align: right;
     }
 
+    .panel-title {
+      min-width: 0;
+      gap: 10px;
+    }
+
     .button,
     button {
       display: inline-flex;
@@ -136,6 +144,15 @@
       text-decoration: none;
       font-weight: 700;
       cursor: pointer;
+    }
+
+    .icon-button {
+      width: 36px;
+      min-width: 36px;
+      min-height: 34px;
+      padding: 0;
+      font-size: 1rem;
+      line-height: 1;
     }
 
     .button:hover,
@@ -212,6 +229,11 @@
       overflow: hidden;
     }
 
+    .side-panel {
+      display: grid;
+      grid-template-rows: auto minmax(360px, 58vh);
+    }
+
     .panel-head {
       display: flex;
       align-items: center;
@@ -221,6 +243,12 @@
       padding: 11px 14px;
       border-bottom: 1px solid var(--line);
       background: color-mix(in srgb, var(--soft) 70%, transparent);
+    }
+
+    .side-body {
+      min-height: 360px;
+      max-height: 58vh;
+      overflow: auto;
     }
 
     .tabs {
@@ -246,6 +274,19 @@
       padding: 0;
     }
 
+    .source,
+    .favorite-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .source a,
+    .favorite-item {
+      min-width: 0;
+    }
+
     .source a,
     .favorite-item {
       display: grid;
@@ -253,28 +294,51 @@
       padding: 13px 15px;
       color: inherit;
       text-decoration: none;
-      border-bottom: 1px solid var(--line);
     }
 
-    .source:last-child a,
-    .favorite-item:last-child {
+    .favorite-item {
+      width: 100%;
+      min-height: 0;
+      border-top: 0;
+      border-right: 0;
+      border-bottom: 0;
+      border-left: 0;
+      border-radius: 0;
+      background: transparent;
+      text-align: left;
+      justify-items: start;
+    }
+
+    .source:last-child,
+    .favorite-row:last-child {
       border-bottom: 0;
     }
 
     .source a:hover,
     .source a.active,
     .source a:focus-visible,
-    .favorite-item:hover {
+    .favorite-item:hover,
+    .source:has(a.active) {
       background: color-mix(in srgb, var(--accent2) 10%, transparent);
+    }
+
+    .source-copy,
+    .favorite-copy {
+      margin-right: 10px;
+      background: transparent;
     }
 
     .source strong,
     .favorite-item strong {
+      display: block;
       font-size: .95rem;
+      line-height: 1.35;
     }
 
     .source small,
     .favorite-item small {
+      display: block;
+      margin-top: 3px;
       color: var(--muted);
     }
 
@@ -316,6 +380,11 @@
       transform: translateY(-1px);
       border-color: color-mix(in srgb, var(--accent2) 42%, var(--line));
       box-shadow: 0 12px 28px rgba(15, 23, 42, .08);
+    }
+
+    .channel.focused {
+      border-color: var(--accent2);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent2) 22%, transparent);
     }
 
     .logo-img {
@@ -369,14 +438,19 @@
     .actions .fav-icon {
       flex: 0 0 38px;
       width: 38px;
+      height: 34px;
+      min-height: 34px;
       padding: 0;
-      font-size: 1rem;
+      font-family: "Segoe UI Symbol", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+      font-size: 1.08rem;
+      font-weight: 800;
       line-height: 1;
     }
 
     button.faved {
       color: var(--fav);
       border-color: color-mix(in srgb, var(--fav) 45%, var(--line));
+      background: color-mix(in srgb, var(--fav) 10%, var(--soft));
     }
 
     .loading {
@@ -440,7 +514,7 @@
     </section>
 
     <section class="layout">
-      <aside class="panel">
+      <aside class="panel side-panel">
         <div class="panel-head">
           <div class="tabs">
             <button class="tab active" type="button" data-tab="groups">我的分组</button>
@@ -448,17 +522,25 @@
           </div>
           <span class="meta" id="side-count">0</span>
         </div>
-        <ul class="sources" id="source-list"></ul>
-        <template id="source-template">
+        <div class="side-body">
+          <ul class="sources" id="source-list"></ul>
+          <template id="source-template">
 __SOURCE_ITEMS__
-        </template>
-        <div id="favorite-list" hidden></div>
+          </template>
+          <div id="favorite-list" hidden></div>
+        </div>
       </aside>
 
       <section class="panel results">
         <div class="panel-head">
-          <h2 id="result-title">国内及港澳台频道</h2>
-          <span class="meta" id="result-count">Loading</span>
+          <div class="panel-title">
+            <h2 id="result-title">国内及港澳台频道</h2>
+            <span class="meta" id="result-count">Loading</span>
+          </div>
+          <div class="head-actions">
+            <button id="refresh-results" class="icon-button" type="button" title="刷新当前结果" aria-label="刷新当前结果">&#8635;</button>
+            <button id="export-results-m3u" class="icon-button" type="button" title="导出当前结果 M3U" aria-label="导出当前结果 M3U">&#8681;</button>
+          </div>
         </div>
         <div id="results" class="empty">正在加载默认分组。</div>
       </section>
@@ -473,11 +555,11 @@ __SOURCE_ITEMS__
     const favBox = $("#favorite-list"), srcList = $("#source-list"), sideCount = $("#side-count");
     const KEY = "iptv_favorites_v1";
     const LOCAL_SOURCES = [
-      { id: "china", name: "国内及港澳台频道", description: "按 tvg-id 地区后缀筛选中国大陆、香港、澳门、台湾频道。" },
-      { id: "mainland", name: "中国大陆频道", description: "筛选 tvg-id 为 .cn 的频道，包含央视、卫视、地方台等。" },
-      { id: "hongkong", name: "香港频道", description: "筛选 tvg-id 为 .hk 的频道，包含 RTHK、HOY、TVB 等。" },
-      { id: "macau", name: "澳门频道", description: "筛选 tvg-id 为 .mo 的频道，包含 TDM、澳门、澳門相关频道。" },
-      { id: "taiwan", name: "台湾频道", description: "筛选 tvg-id 为 .tw 的频道，包含民视、华视、TVBS、三立、东森等。" },
+      { id: "china", name: "国内及港澳台频道", description: "中国大陆、香港、澳门、台湾频道。" },
+      { id: "mainland", name: "中国大陆频道", description: "央视、卫视、地方台等。" },
+      { id: "hongkong", name: "香港频道", description: "RTHK、HOY、TVB 等。" },
+      { id: "macau", name: "澳门频道", description: "TDM、澳门、澳門相关频道。" },
+      { id: "taiwan", name: "台湾频道", description: "民视、华视、TVBS、三立、东森等。" },
       { id: "cctv", name: "CCTV", description: "只保留 CCTV 频道。" },
       { id: "cgtn", name: "CGTN", description: "只保留 CGTN 频道。" },
       { id: "all", name: "完整 IPTV.org", description: "返回 IPTV.org index.m3u 完整源。" },
@@ -498,6 +580,7 @@ __SOURCE_ITEMS__
           <span><strong>${esc(x.name)}</strong><small>${esc(x.description)}</small></span>
           <code>${path}</code>
         </a>
+        <button class="icon-button source-copy" type="button" data-copy-subscription="${path}" title="复制在线订阅定制" aria-label="复制${esc(x.name)}在线订阅定制">&#10697;</button>
       </li>`;
     }
 
@@ -514,21 +597,39 @@ __SOURCE_ITEMS__
       sideCount.textContent = String(value);
     }
 
+    function normalizeFavorite(x) {
+      return {
+        name: x.name || x.tvg_name || x.tvg_id || "",
+        tvg_id: x.tvg_id || "",
+        tvg_name: x.tvg_name || "",
+        group_title: x.group_title || "",
+        logo: x.logo || "",
+        url: x.url || "",
+        saved_at: x.saved_at || new Date().toISOString(),
+        refreshed_at: x.refreshed_at || "",
+        stale: Boolean(x.stale),
+      };
+    }
+
     function favs() {
       try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch (e) { return []; }
     }
 
     function saveFavs(items) {
-      localStorage.setItem(KEY, JSON.stringify(items.slice(0, 200)));
+      localStorage.setItem(KEY, JSON.stringify(items.map(normalizeFavorite).slice(0, 200)));
       renderFavList();
     }
 
-    function favKey(x) {
-      return x.url || x.tvg_id || x.name;
+    function favoriteIdentity(x) {
+      return (x.tvg_id || x.name || x.url || "").toLowerCase();
+    }
+
+    function channelKey(x, index) {
+      return favoriteIdentity(x) || `channel-${index}`;
     }
 
     function isFav(x) {
-      return favs().some((f) => favKey(f) === favKey(x));
+      return favs().some((f) => favoriteIdentity(f) === favoriteIdentity(x));
     }
 
     function spin(label) {
@@ -556,7 +657,7 @@ __SOURCE_ITEMS__
       current = items || [];
       results.className = current.length ? "channel-grid" : "empty";
       results.innerHTML = current.length ? current.map((x, i) => `
-        <article class="channel">
+        <article class="channel" data-channel-key="${esc(channelKey(x, i))}">
           <img class="logo-img" src="${esc(x.logo)}" alt="" loading="lazy">
           <div>
             <span class="title">${esc(x.name || x.tvg_name || x.tvg_id)}</span>
@@ -577,10 +678,32 @@ __SOURCE_ITEMS__
       const items = favs();
       if (activeTab === "favorites") setSideCount(items.length);
       favBox.innerHTML = items.length ? items.map((x, i) => `
-        <button class="favorite-item" type="button" data-fav-open="${i}">
-          <strong>${esc(x.name || x.tvg_name || x.tvg_id)}</strong>
-          <small>${esc(x.tvg_id || x.url)}</small>
-        </button>`).join("") : '<div class="empty">还没有收藏频道。</div>';
+        <div class="favorite-row">
+          <button class="favorite-item" type="button" data-fav-open="${i}" data-channel-key="${esc(channelKey(x, i))}">
+            <strong>${esc(x.name || x.tvg_name || x.tvg_id)}</strong>
+            <small>${esc(x.stale ? "可能过期 / " : "")}${esc(x.tvg_id || x.url)}</small>
+          </button>
+          <button class="icon-button favorite-copy" type="button" data-copy-favorite="${esc(x.url)}" title="复制收藏播放链接" aria-label="复制${esc(x.name || x.tvg_name || x.tvg_id)}播放链接">&#10697;</button>
+        </div>`).join("") : '<div class="empty">还没有收藏频道。</div>';
+    }
+
+    function renderFavoritesResult() {
+      const items = favs();
+      title.textContent = "收藏";
+      playlist.href = "#";
+      count.textContent = items.length + " channel(s)";
+      stop("收藏");
+      render(items);
+    }
+
+    function focusFavorite(key) {
+      const card = [...results.querySelectorAll("[data-channel-key]")]
+        .find((item) => item.dataset.channelKey === key);
+      if (!card) return;
+      results.querySelectorAll(".channel.focused").forEach((item) => item.classList.remove("focused"));
+      card.classList.add("focused");
+      card.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      setTimeout(() => card.classList.remove("focused"), 1600);
     }
 
     function showTab(tab, restoreGroup = true) {
@@ -590,12 +713,7 @@ __SOURCE_ITEMS__
       favBox.hidden = tab !== "favorites";
       if (tab === "favorites") {
         setActive("");
-        title.textContent = "收藏";
-        playlist.href = "#";
-        const items = favs();
-        count.textContent = items.length + " channel(s)";
-        stop("收藏");
-        render(items);
+        renderFavoritesResult();
       } else {
         setSideCount(srcList.querySelectorAll("[data-source]").length);
         if (restoreGroup && lastGroupLink) {
@@ -720,16 +838,30 @@ __SOURCE_ITEMS__
       if (favorite) {
         const item = current[Number(favorite.dataset.favorite)];
         const list = favs();
-        const exists = list.some((x) => favKey(x) === favKey(item));
-        saveFavs(exists ? list.filter((x) => favKey(x) !== favKey(item)) : [item, ...list]);
-        render(current);
+        const exists = list.some((x) => favoriteIdentity(x) === favoriteIdentity(item));
+        const next = exists ? list.filter((x) => favoriteIdentity(x) !== favoriteIdentity(item)) : [normalizeFavorite(item), ...list];
+        saveFavs(next);
+        if (activeTab === "favorites") renderFavoritesResult();
+        else render(current);
+        return;
+      }
+
+      const copyFavorite = event.target.closest("[data-copy-favorite]");
+      if (copyFavorite) {
+        const text = copyFavorite.dataset.copyFavorite;
+        try {
+          await navigator.clipboard.writeText(text);
+          copyFavorite.textContent = "OK";
+          setTimeout(() => { copyFavorite.innerHTML = "&#10697;"; }, 1200);
+        } catch (error) {
+          window.prompt("复制收藏播放链接", text);
+        }
         return;
       }
 
       const favOpen = event.target.closest("[data-fav-open]");
       if (favOpen) {
-        const item = favs()[Number(favOpen.dataset.favOpen)];
-        if (item) render([item]);
+        focusFavorite(favOpen.dataset.channelKey);
         return;
       }
 
@@ -744,7 +876,83 @@ __SOURCE_ITEMS__
           window.prompt("复制链接", text);
         }
       }
+
+      const copySubscription = event.target.closest("[data-copy-subscription]");
+      if (copySubscription) {
+        const text = new URL(copySubscription.dataset.copySubscription, location.href).href;
+        try {
+          await navigator.clipboard.writeText(text);
+          copySubscription.textContent = "OK";
+          setTimeout(() => { copySubscription.innerHTML = "&#10697;"; }, 1200);
+        } catch (error) {
+          window.prompt("复制在线订阅定制", text);
+        }
+      }
     });
+
+    async function refreshFavoriteItem(item) {
+      if (item.tvg_id) {
+        try {
+          const response = await fetch("/search.json?q=" + encodeURIComponent("tvg:" + item.tvg_id));
+          const data = await response.json();
+          const match = (data.results || []).find((x) => favoriteIdentity(x) === favoriteIdentity(item));
+          if (match) return normalizeFavorite({ ...item, ...match, refreshed_at: new Date().toISOString(), stale: false });
+        } catch (error) {}
+      }
+
+      try {
+        const latest = await loadLocal();
+        const match = latest.find((x) => favoriteIdentity(x) && favoriteIdentity(x) === favoriteIdentity(item));
+        if (match) return normalizeFavorite({ ...item, ...match, refreshed_at: new Date().toISOString(), stale: false });
+      } catch (error) {}
+
+      return normalizeFavorite({ ...item, stale: true });
+    }
+
+    async function refreshFavorites() {
+      const items = favs();
+      if (!items.length) return;
+      spin("Refreshing");
+      try {
+        const next = await Promise.all(items.map(refreshFavoriteItem));
+        saveFavs(next);
+        stop("收藏链接已刷新");
+        if (activeTab === "favorites") renderFavoritesResult();
+      } catch (error) {
+        stop("刷新失败：" + (error.message || "index.m3u"));
+      }
+    }
+
+    function downloadText(filename, text, type) {
+      const blob = new Blob([text], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function playlistFromResults(items) {
+      const lines = ["#EXTM3U"];
+      items.forEach((x) => {
+        lines.push(`#EXTINF:-1 tvg-id="${x.tvg_id || ""}" tvg-name="${x.tvg_name || x.name || ""}" tvg-logo="${x.logo || ""}" group-title="${x.group_title || "Results"}",${x.name || x.tvg_name || x.tvg_id}`);
+        lines.push(x.url || "");
+      });
+      return lines.join("\n");
+    }
+
+    function exportResultsM3U() {
+      const slug = title.textContent.replace(/[^\w\u4e00-\u9fa5-]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase() || "results";
+      downloadText(`iptv-${slug}.m3u`, playlistFromResults(current), "audio/x-mpegurl");
+    }
+
+    $("#refresh-results").addEventListener("click", () => {
+      if (activeTab === "favorites") refreshFavorites();
+      else if (input.value.trim()) search(input.value.trim());
+      else if (lastGroupLink) loadSource(lastGroupLink, false);
+    });
+    $("#export-results-m3u").addEventListener("click", exportResultsM3U);
 
     input.addEventListener("input", () => {
       const q = input.value.trim();
