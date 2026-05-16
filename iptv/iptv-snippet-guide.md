@@ -8,7 +8,7 @@
 | --- | --- |
 | `iptv-snippet.js` | 部署到 Cloudflare Snippets 的脚本。 |
 | `iptv.html` | 本地预览主页样式用，不直接部署。 |
-| `iptv-snippet.test.mjs` | Node 测试，覆盖路由、筛选、favicon 和 32KB 限制。 |
+| `iptv-snippet.test.mjs` | Node 测试，覆盖路由、筛选、搜索、favicon 和 32KB 限制。 |
 | `index.m3u` | 本地下载的上游样本，用于检查频道覆盖情况。 |
 
 ## 路由
@@ -17,6 +17,10 @@
 | --- | --- | --- |
 | `/` | `text/html` | 主页，展示可用播放源。 |
 | `/sources` | `application/json` | 源列表 JSON，给前端或脚本读取。 |
+| `/sources/china.json` | `application/json` | 指定分组的频道列表 JSON，给主页右侧预览使用。 |
+| `/search.json?q=cctv1` | `application/json` | 搜索上游 M3U，给主页显示频道列表。 |
+| `/search.m3u?q=cctv1` | `audio/x-mpegurl` | 搜索上游 M3U，给播放器订阅。 |
+| `/search?q=cctv1` | `audio/x-mpegurl` | `/search.m3u` 的简写形式。 |
 | `/china` | `audio/x-mpegurl` | 国内及港澳台频道。 |
 | `/mainland` | `audio/x-mpegurl` | 中国大陆频道。 |
 | `/hongkong` | `audio/x-mpegurl` | 香港频道。 |
@@ -41,6 +45,10 @@ flowchart TD
   A[Client Request] --> B{Path}
   B -->|/| C[返回 HTML 主页]
   B -->|/sources| D[返回 JSON 源列表]
+  B -->|/sources/source.json| X[拉取并筛选分组频道]
+  X --> Y[输出频道 JSON]
+  B -->|/search.json 或 /search.m3u| S[拉取并搜索 iptv-org index.m3u]
+  S --> T[输出 JSON 或 M3U]
   B -->|/china 等源路径| E[拉取 iptv-org index.m3u]
   E --> F{source.match}
   F -->|正则筛选| G[输出过滤后的 M3U]
@@ -48,7 +56,13 @@ flowchart TD
   B -->|未知路径| I[404 JSON + 可用 source 列表]
 ```
 
-频道筛选不是开放代理，也不是让用户传任意 URL。所有可访问源都在 `CONFIG.sources` 里白名单声明：
+频道筛选和搜索都不是开放代理，也不是让用户传任意 URL。上游固定为：
+
+```text
+https://iptv-org.github.io/iptv/index.m3u
+```
+
+所有固定分组都在 `CONFIG.sources` 里白名单声明：
 
 ```js
 {
@@ -146,18 +160,38 @@ https://iptv.ssr.ddns-ip.net/*
 https://iptv.ssr.ddns-ip.net/
 ```
 
+主页提供一个轻量查询界面：
+
+- 默认显示第一个分组 `/china` 的频道列表。
+- 点击左侧“我的分组”不会跳转页面，而是在右侧刷新该分组的频道卡片。
+- 输入关键词后会调用 `/search.json` 显示频道列表，并生成对应的 M3U 订阅地址。
+- 右上角提供 `JSON` 和当前结果对应的 `M3U` 入口。
+- 左侧提供“我的分组”和“收藏”选项卡，收藏保存在浏览器 `localStorage`。
+- 每张频道卡片都有“收藏”、“复制链接”和“打开”操作。
+
 PotPlayer / VLC / Kodi / TiviMate 订阅地址：
 
 ```text
 https://iptv.ssr.ddns-ip.net/china
 ```
 
+搜索订阅地址：
+
+```text
+https://iptv.ssr.ddns-ip.net/search.m3u?q=cctv1
+https://iptv.ssr.ddns-ip.net/search.m3u?q=凤凰
+https://iptv.ssr.ddns-ip.net/search.m3u?q=country:cn%20cctv
+```
+
 命令行自检：
 
 ```bash
 curl "https://iptv.ssr.ddns-ip.net/sources"
+curl "https://iptv.ssr.ddns-ip.net/sources/china.json"
 curl "https://iptv.ssr.ddns-ip.net/china"
 curl "https://iptv.ssr.ddns-ip.net/mainland"
+curl "https://iptv.ssr.ddns-ip.net/search.json?q=cctv1"
+curl "https://iptv.ssr.ddns-ip.net/search.m3u?q=country:cn%20cctv"
 ```
 
 无效路径会返回 `404` JSON，并附带可用源列表：
@@ -187,6 +221,43 @@ GET https://iptv.ssr.ddns-ip.net/not-exists
 
 不建议做成 `?url=任意地址` 的开放代理。白名单式配置更容易控缓存、排障和安全边界。
 
+## 搜索语法
+
+搜索是轻量版，不完整复刻 `iptv-org` 官网的 SDK 搜索语法。它会解析 `index.m3u` 中每个频道的 `#EXTINF` 元信息和播放地址，然后匹配：
+
+- 普通关键词：`q=cctv1`
+- 频道名称：`q=name:cctv`
+- `tvg-id`：`q=tvg:CCTV1.cn`
+- 国家/地区后缀：`q=country:cn`
+- 分组：`q=group:China`
+- 播放地址：`q=url:m3u8`
+- 台标地址：`q=logo:cctv`
+
+多个普通关键词是 AND 关系，例如：
+
+```text
+https://iptv.ssr.ddns-ip.net/search.m3u?q=country:cn%20cctv
+```
+
+上面会保留 `tvg-id` 国家后缀为 `.cn`，并且频道信息里包含 `cctv` 的条目。
+
+## 本地演示
+
+`iptv.html` 可以结合本地 `index.m3u` 做静态演示。因为浏览器通常不允许 `file://` 页面直接读取旁边的文件，建议在 `iptv` 目录启动一个本地静态服务器：
+
+```bash
+cd iptv
+python -m http.server 8787
+```
+
+然后打开：
+
+```text
+http://127.0.0.1:8787/iptv.html
+```
+
+页面会优先调用线上 Snippet API；如果本地没有这些 API，它会 fallback 到同目录的 `index.m3u`，在浏览器里解析和筛选，用于预览 UI、搜索、分组和收藏交互。这个本地 fallback 只是演示用途，部署到 Cloudflare 后仍然由 Snippet 后端读取上游 `https://iptv-org.github.io/iptv/index.m3u`。
+
 ## CORS 说明
 
 `allowedOrigins` 只影响浏览器跨域 `fetch()`。PotPlayer 订阅 M3U 一般不会带 `Origin` 请求头，也不会受浏览器 CORS 限制。
@@ -207,5 +278,8 @@ node --test iptv/iptv-snippet.test.mjs
 - 主页包含 favicon。
 - Snippet 体积低于 32KB。
 - `/sources` 返回公开源信息。
+- `/sources/china.json` 返回默认分组的频道卡片数据。
+- `/search.json` 返回可展示的频道列表。
+- `/search.m3u` 返回可订阅的搜索结果播放列表。
 - `/china` 能匹配 `.cn/.hk/.mo/.tw` 频道。
 - 未知路径返回 `404` 和可用 source 列表。

@@ -4,28 +4,34 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>IPTV Sources</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23171814'/%3E%3Cpath d='M8 11h16v10H8z' fill='%23fffaf0'/%3E%3Cpath d='M11 14h10' stroke='%23b42318' stroke-width='2.2' stroke-linecap='round'/%3E%3Cpath d='M11 18h6' stroke='%230b7285' stroke-width='2.2' stroke-linecap='round'/%3E%3Cpath d='M13 25h6' stroke='%23fffaf0' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E" type="image/svg+xml">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f1417'/%3E%3Cpath d='M7 10h18v11H7z' fill='%23f8fafc'/%3E%3Cpath d='M11 14h9' stroke='%23d9480f' stroke-width='2.2' stroke-linecap='round'/%3E%3Cpath d='M11 18h6' stroke='%230b7285' stroke-width='2.2' stroke-linecap='round'/%3E%3Cpath d='M13 25h6' stroke='%23f8fafc' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E" type="image/svg+xml">
   <style>
     :root {
       color-scheme: light dark;
-      --bg: #f4f1e8;
-      --fg: #171814;
-      --muted: #69665d;
-      --line: #d7d0bf;
-      --panel: #fffaf0;
-      --accent: #b42318;
-      --accent-2: #0b7285;
+      --bg: #f5f6f2;
+      --fg: #101519;
+      --muted: #68727d;
+      --line: #d9dfe1;
+      --panel: #ffffff;
+      --soft: #eef2f0;
+      --accent: #d9480f;
+      --accent2: #087f8c;
+      --fav: #b7791f;
+      --shadow: 0 18px 56px rgba(15, 23, 42, .08);
     }
 
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #151512;
-        --fg: #f4efe2;
-        --muted: #aaa394;
-        --line: #3b382f;
-        --panel: #1f1e19;
-        --accent: #ff6b5f;
-        --accent-2: #66d9e8;
+        --bg: #0e1315;
+        --fg: #edf2f7;
+        --muted: #9aa4ae;
+        --line: #283138;
+        --panel: #171d21;
+        --soft: #20292f;
+        --accent: #ff8759;
+        --accent2: #66d9e8;
+        --fav: #ffd166;
+        --shadow: 0 18px 56px rgba(0, 0, 0, .25);
       }
     }
 
@@ -36,215 +42,719 @@
     body {
       margin: 0;
       min-height: 100vh;
-      background:
-        linear-gradient(90deg, color-mix(in srgb, var(--line) 58%, transparent) 1px, transparent 1px),
-        linear-gradient(0deg, color-mix(in srgb, var(--line) 40%, transparent) 1px, transparent 1px),
-        var(--bg);
-      background-size: 44px 44px;
       color: var(--fg);
-      font: 16px/1.6 "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+      background:
+        radial-gradient(circle at 0 0, color-mix(in srgb, var(--accent2) 16%, transparent), transparent 28rem),
+        linear-gradient(90deg, color-mix(in srgb, var(--line) 46%, transparent) 1px, transparent 1px),
+        linear-gradient(0deg, color-mix(in srgb, var(--line) 32%, transparent) 1px, transparent 1px),
+        var(--bg);
+      background-size: auto, 40px 40px, 40px 40px, auto;
+      font: 15px/1.55 "Segoe UI", "Aptos", system-ui, sans-serif;
     }
 
     main {
-      width: min(860px, calc(100% - 36px));
+      width: min(1220px, calc(100% - 32px));
       margin: 0 auto;
-      padding: 56px 0;
+      padding: 24px 0 42px;
     }
 
-    .mast {
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .brand,
+    .top-actions,
+    .tabs,
+    .info-row,
+    .actions {
+      display: flex;
+      align-items: center;
+    }
+
+    .brand {
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .top-actions,
+    .actions {
+      gap: 8px;
+    }
+
+    .logo {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 24px;
-      align-items: end;
-      padding-bottom: 28px;
-      border-bottom: 2px solid var(--fg);
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      color: #fff;
+      background: var(--fg);
+      font-weight: 900;
     }
 
-    h1 {
+    h1,
+    h2 {
       margin: 0;
-      font-size: clamp(2.25rem, 8vw, 5.5rem);
-      line-height: 0.92;
       letter-spacing: 0;
     }
 
-    .badge {
-      border: 2px solid var(--fg);
-      padding: 10px 14px;
-      background: var(--panel);
-      font: 0.78rem/1.25 ui-monospace, SFMono-Regular, Consolas, monospace;
-      text-transform: uppercase;
+    h1 {
+      font-size: 1.4rem;
+      line-height: 1.05;
     }
 
-    .intro {
-      max-width: 680px;
-      margin: 22px 0 34px;
+    h2 {
+      font-size: .92rem;
+    }
+
+    .host,
+    .meta {
       color: var(--muted);
+      font: .83rem/1.25 ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    #side-count {
+      min-width: 3ch;
+      text-align: right;
+    }
+
+    .button,
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0 11px;
+      color: var(--fg);
+      background: var(--soft);
+      text-decoration: none;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .button:hover,
+    button:hover,
+    .button:focus-visible,
+    button:focus-visible {
+      border-color: var(--accent2);
+      color: var(--accent2);
+    }
+
+    .primary {
+      color: #fff;
+      border-color: var(--accent);
+      background: var(--accent);
+    }
+
+    .primary:hover,
+    .primary:focus-visible {
+      color: #fff;
+      border-color: var(--accent);
+      filter: brightness(1.05);
+    }
+
+    .searchbar {
+      margin-bottom: 16px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--panel) 96%, transparent);
+      box-shadow: var(--shadow);
+    }
+
+    form {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+    }
+
+    input {
+      min-width: 0;
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      outline: 0;
+      padding: 0 13px;
+      color: var(--fg);
+      background: var(--panel);
+      font: .98rem/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    input:focus {
+      border-color: var(--accent2);
+    }
+
+    .search-meta {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 9px;
+      margin-top: 9px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(280px, 350px) minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--panel) 95%, transparent);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 54px;
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--line);
+      background: color-mix(in srgb, var(--soft) 70%, transparent);
+    }
+
+    .tabs {
+      gap: 6px;
+    }
+
+    .tab {
+      min-height: 32px;
+      padding: 0 10px;
+      color: var(--muted);
+      background: transparent;
+    }
+
+    .tab.active {
+      color: var(--fg);
+      background: var(--panel);
+      border-color: var(--line);
     }
 
     .sources {
       list-style: none;
       margin: 0;
       padding: 0;
-      border-top: 1px solid var(--line);
     }
 
-    .source a {
+    .source a,
+    .favorite-item {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 20px;
-      align-items: center;
-      min-height: 78px;
-      padding: 18px 0;
+      gap: 4px;
+      padding: 13px 15px;
       color: inherit;
       text-decoration: none;
       border-bottom: 1px solid var(--line);
     }
 
-    .source strong {
-      display: block;
-      font-size: 1.1rem;
+    .source:last-child a,
+    .favorite-item:last-child {
+      border-bottom: 0;
     }
 
-    .source small {
-      display: block;
+    .source a:hover,
+    .source a.active,
+    .source a:focus-visible,
+    .favorite-item:hover {
+      background: color-mix(in srgb, var(--accent2) 10%, transparent);
+    }
+
+    .source strong,
+    .favorite-item strong {
+      font-size: .95rem;
+    }
+
+    .source small,
+    .favorite-item small {
       color: var(--muted);
-      font-size: 0.92rem;
-    }
-
-    .source a:hover strong,
-    .source a:focus-visible strong {
-      color: var(--accent);
     }
 
     code {
-      color: var(--accent-2);
-      font: 0.9rem/1.4 ui-monospace, SFMono-Regular, Consolas, monospace;
+      color: var(--accent2);
+      font: .85rem/1.35 ui-monospace, SFMono-Regular, Consolas, monospace;
       overflow-wrap: anywhere;
     }
 
-    footer {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px 18px;
-      margin-top: 34px;
+    .results {
+      min-height: 460px;
+    }
+
+    .empty {
+      padding: 26px 18px;
       color: var(--muted);
-      font-size: 0.9rem;
     }
 
-    footer a {
-      color: inherit;
-      text-decoration-color: var(--line);
-      text-underline-offset: 4px;
+    .channel-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 12px;
+      padding: 12px;
     }
 
-    @media (max-width: 620px) {
+    .channel {
+      display: grid;
+      grid-template-columns: 70px minmax(0, 1fr);
+      gap: 12px;
+      min-height: 134px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+    }
+
+    .channel:hover {
+      transform: translateY(-1px);
+      border-color: color-mix(in srgb, var(--accent2) 42%, var(--line));
+      box-shadow: 0 12px 28px rgba(15, 23, 42, .08);
+    }
+
+    .logo-img {
+      width: 66px;
+      height: 44px;
+      object-fit: contain;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+    }
+
+    .title {
+      display: block;
+      font-weight: 760;
+      overflow-wrap: anywhere;
+    }
+
+    .info-row {
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 5px;
+    }
+
+    .sub {
+      color: var(--muted);
+    }
+
+    .tag {
+      display: inline-flex;
+      max-width: 100%;
+      border-radius: 7px;
+      padding: 4px 7px;
+      background: var(--soft);
+      color: var(--muted);
+      font: .8rem/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
+      overflow-wrap: anywhere;
+    }
+
+    .actions {
+      grid-column: 1 / -1;
+      align-self: end;
+    }
+
+    .actions button,
+    .actions a {
+      flex: 1;
+      min-height: 34px;
+      font-size: .86rem;
+    }
+
+    .actions .fav-icon {
+      flex: 0 0 38px;
+      width: 38px;
+      padding: 0;
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    button.faved {
+      color: var(--fav);
+      border-color: color-mix(in srgb, var(--fav) 45%, var(--line));
+    }
+
+    .loading {
+      color: var(--accent);
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    @media (max-width: 820px) {
       main {
-        width: min(100% - 28px, 860px);
-        padding: 40px 0;
+        width: min(100% - 22px, 1220px);
       }
 
-      .mast {
+      header,
+      .layout {
+        display: grid;
         grid-template-columns: 1fr;
-        align-items: start;
       }
 
-      .badge {
-        width: max-content;
-        max-width: 100%;
+      .top-actions {
+        justify-content: start;
       }
 
-      .source a {
+      form {
         grid-template-columns: 1fr;
-        gap: 8px;
+      }
+
+      .channel-grid {
+        grid-template-columns: 1fr;
       }
     }
   </style>
 </head>
 <body>
-  <main>
-    <section class="mast" aria-labelledby="title">
-      <h1 id="title">IPTV Sources</h1>
-      <div class="badge">iptv.ssr.ddns-ip.net</div>
+  <main data-default-source="china">
+    <header>
+      <div class="brand">
+        <div class="logo">IP</div>
+        <div>
+          <h1>IPTV Sources</h1>
+          <div class="host">__HOST__</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <a class="button" href="/sources">JSON</a>
+        <a class="button" id="header-playlist-link" href="/china">M3U</a>
+      </div>
+    </header>
+
+    <section class="searchbar">
+      <form id="search-form" autocomplete="off">
+        <input id="q" name="q" type="search" placeholder="cctv1 / 凤凰 / country:cn cctv" aria-label="Search IPTV channels">
+        <button class="primary" type="submit">搜索</button>
+      </form>
+      <div class="search-meta">
+        <span class="meta" id="status">国内及港澳台频道</span>
+        <span class="meta"><code>/search.json?q=</code> <code>/search.m3u?q=</code></span>
+      </div>
     </section>
-    <p class="intro">主页返回这个目录页；下面每个路径返回 M3U 播放列表，可直接填入 PotPlayer、VLC 或其他 IPTV 播放器。</p>
-    <ul class="sources">
-      <li class="source">
-        <a href="/china">
-          <span>
-            <strong>国内及港澳台频道</strong>
-            <small>按 tvg-id 地区后缀筛选中国大陆、香港、澳门、台湾频道。</small>
-          </span>
-          <code>/china</code>
-        </a>
-      </li>
-      <li class="source">
-        <a href="/mainland">
-          <span>
-            <strong>中国大陆频道</strong>
-            <small>筛选 tvg-id 为 .cn 的频道，包含央视、卫视、地方台等。</small>
-          </span>
-          <code>/mainland</code>
-        </a>
-      </li>
-      <li class="source">
-        <a href="/hongkong">
-          <span>
-            <strong>香港频道</strong>
-            <small>筛选 tvg-id 为 .hk 的频道，包含 RTHK、HOY、TVB 等。</small>
-          </span>
-          <code>/hongkong</code>
-        </a>
-      </li>
-      <li class="source">
-        <a href="/macau">
-          <span>
-            <strong>澳门频道</strong>
-            <small>筛选 tvg-id 为 .mo 的频道，包含 TDM、澳门、澳門相关频道。</small>
-          </span>
-          <code>/macau</code>
-        </a>
-      </li>
-      <li class="source">
-        <a href="/taiwan">
-          <span>
-            <strong>台湾频道</strong>
-            <small>筛选 tvg-id 为 .tw 的频道，包含民视、华视、TVBS、三立、东森等。</small>
-          </span>
-          <code>/taiwan</code>
-        </a>
-      </li>
-      <li class="source">
-        <a href="/cctv">
-          <span>
-            <strong>CCTV</strong>
-            <small>只保留 CCTV 频道。</small>
-          </span>
-          <code>/cctv</code>
-        </a>
-      </li>
-      <li class="source">
-        <a href="/cgtn">
-          <span>
-            <strong>CGTN</strong>
-            <small>只保留 CGTN 频道。</small>
-          </span>
-          <code>/cgtn</code>
-        </a>
-      </li>
-      <li class="source">
-        <a href="/all">
-          <span>
-            <strong>完整 IPTV.org</strong>
-            <small>返回 IPTV.org index.m3u 完整源。</small>
-          </span>
-          <code>/all</code>
-        </a>
-      </li>
-    </ul>
-    <footer>
-      <span>主页：<code>https://iptv.ssr.ddns-ip.net</code></span>
-      <span>JSON：<a href="/sources">/sources</a></span>
-    </footer>
+
+    <section class="layout">
+      <aside class="panel">
+        <div class="panel-head">
+          <div class="tabs">
+            <button class="tab active" type="button" data-tab="groups">我的分组</button>
+            <button class="tab" type="button" data-tab="favorites">收藏</button>
+          </div>
+          <span class="meta" id="side-count">0</span>
+        </div>
+        <ul class="sources" id="source-list"></ul>
+        <template id="source-template">
+__SOURCE_ITEMS__
+        </template>
+        <div id="favorite-list" hidden></div>
+      </aside>
+
+      <section class="panel results">
+        <div class="panel-head">
+          <h2 id="result-title">国内及港澳台频道</h2>
+          <span class="meta" id="result-count">Loading</span>
+        </div>
+        <div id="results" class="empty">正在加载默认分组。</div>
+      </section>
+    </section>
   </main>
+
+  <script>
+    const $ = (s) => document.querySelector(s), $$ = (s) => [...document.querySelectorAll(s)];
+    const esc = (v) => String(v || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const form = $("#search-form"), input = $("#q"), status = $("#status"), results = $("#results");
+    const playlist = $("#header-playlist-link"), title = $("#result-title"), count = $("#result-count");
+    const favBox = $("#favorite-list"), srcList = $("#source-list"), sideCount = $("#side-count");
+    const KEY = "iptv_favorites_v1";
+    const LOCAL_SOURCES = [
+      { id: "china", name: "国内及港澳台频道", description: "按 tvg-id 地区后缀筛选中国大陆、香港、澳门、台湾频道。" },
+      { id: "mainland", name: "中国大陆频道", description: "筛选 tvg-id 为 .cn 的频道，包含央视、卫视、地方台等。" },
+      { id: "hongkong", name: "香港频道", description: "筛选 tvg-id 为 .hk 的频道，包含 RTHK、HOY、TVB 等。" },
+      { id: "macau", name: "澳门频道", description: "筛选 tvg-id 为 .mo 的频道，包含 TDM、澳门、澳門相关频道。" },
+      { id: "taiwan", name: "台湾频道", description: "筛选 tvg-id 为 .tw 的频道，包含民视、华视、TVBS、三立、东森等。" },
+      { id: "cctv", name: "CCTV", description: "只保留 CCTV 频道。" },
+      { id: "cgtn", name: "CGTN", description: "只保留 CGTN 频道。" },
+      { id: "all", name: "完整 IPTV.org", description: "返回 IPTV.org index.m3u 完整源。" },
+    ];
+    let timer, current = [], localChannels, activeTab = "groups", lastGroupLink;
+
+    function hydrateHost() {
+      const host = $(".host");
+      if (host && host.textContent.includes("__HOST__")) {
+        host.textContent = location.host || "local preview";
+      }
+    }
+
+    function sourceItem(x) {
+      const path = "/" + x.id;
+      return `<li class="source">
+        <a href="${path}" data-source="${esc(x.id)}" data-json="/sources/${esc(x.id)}.json" data-playlist="${path}" data-name="${esc(x.name)}">
+          <span><strong>${esc(x.name)}</strong><small>${esc(x.description)}</small></span>
+          <code>${path}</code>
+        </a>
+      </li>`;
+    }
+
+    function hydrateSources() {
+      const tpl = $("#source-template");
+      const injected = tpl ? tpl.innerHTML.trim() : "";
+      srcList.innerHTML = injected && !injected.includes("__SOURCE_ITEMS__")
+        ? injected
+        : LOCAL_SOURCES.map(sourceItem).join("");
+      setSideCount(srcList.querySelectorAll("[data-source]").length);
+    }
+
+    function setSideCount(value) {
+      sideCount.textContent = String(value);
+    }
+
+    function favs() {
+      try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch (e) { return []; }
+    }
+
+    function saveFavs(items) {
+      localStorage.setItem(KEY, JSON.stringify(items.slice(0, 200)));
+      renderFavList();
+    }
+
+    function favKey(x) {
+      return x.url || x.tvg_id || x.name;
+    }
+
+    function isFav(x) {
+      return favs().some((f) => favKey(f) === favKey(x));
+    }
+
+    function spin(label) {
+      clearInterval(timer);
+      let step = 0;
+      status.classList.add("loading");
+      timer = setInterval(() => {
+        step = (step + 1) % 3;
+        status.textContent = label + ".".repeat(step + 1);
+      }, 360);
+      status.textContent = label + ".";
+    }
+
+    function stop(text) {
+      clearInterval(timer);
+      status.classList.remove("loading");
+      status.textContent = text;
+    }
+
+    function setActive(id) {
+      $$("[data-source]").forEach((a) => a.classList.toggle("active", a.dataset.source === id));
+    }
+
+    function render(items) {
+      current = items || [];
+      results.className = current.length ? "channel-grid" : "empty";
+      results.innerHTML = current.length ? current.map((x, i) => `
+        <article class="channel">
+          <img class="logo-img" src="${esc(x.logo)}" alt="" loading="lazy">
+          <div>
+            <span class="title">${esc(x.name || x.tvg_name || x.tvg_id)}</span>
+            <span class="info-row">
+              <span class="sub">${esc(x.group_title || x.tvg_name || "Live")}</span>
+              <span class="tag">${esc(x.tvg_id || "stream")}</span>
+            </span>
+          </div>
+          <div class="actions">
+            <button type="button" data-copy="${esc(x.url)}">复制链接</button>
+            <a class="button" data-open href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">打开</a>
+            <button class="fav-icon ${isFav(x) ? "faved" : ""}" type="button" data-favorite="${i}" title="${isFav(x) ? "取消收藏" : "收藏"}" aria-label="${isFav(x) ? "取消收藏" : "收藏"}">${isFav(x) ? "♥" : "♡"}</button>
+          </div>
+        </article>`).join("") : "没有匹配频道。";
+    }
+
+    function renderFavList() {
+      const items = favs();
+      if (activeTab === "favorites") setSideCount(items.length);
+      favBox.innerHTML = items.length ? items.map((x, i) => `
+        <button class="favorite-item" type="button" data-fav-open="${i}">
+          <strong>${esc(x.name || x.tvg_name || x.tvg_id)}</strong>
+          <small>${esc(x.tvg_id || x.url)}</small>
+        </button>`).join("") : '<div class="empty">还没有收藏频道。</div>';
+    }
+
+    function showTab(tab, restoreGroup = true) {
+      activeTab = tab;
+      $$("[data-tab]").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
+      srcList.hidden = tab !== "groups";
+      favBox.hidden = tab !== "favorites";
+      if (tab === "favorites") {
+        setActive("");
+        title.textContent = "收藏";
+        playlist.href = "#";
+        const items = favs();
+        count.textContent = items.length + " channel(s)";
+        stop("收藏");
+        render(items);
+      } else {
+        setSideCount(srcList.querySelectorAll("[data-source]").length);
+        if (restoreGroup && lastGroupLink) {
+          loadSource(lastGroupLink, false);
+        }
+      }
+    }
+
+    async function loadJson(url, label, sourceId) {
+      spin("Searching");
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        if (!response.ok || !data.ok) throw new Error(data.error || "Load failed");
+        title.textContent = label;
+        count.textContent = data.count + " channel(s)";
+        stop(label);
+        render(data.results || []);
+        return data;
+      } catch (error) {
+        const data = sourceId ? await localSource(sourceId, label) : await localSearch(label.replace(/^搜索：/, ""));
+        title.textContent = label;
+        count.textContent = data.count + " channel(s)";
+        stop(label + " / local index.m3u");
+        render(data.results || []);
+        return data;
+      }
+    }
+
+    async function loadSource(link, switchTab = true) {
+      input.value = "";
+      lastGroupLink = link;
+      if (switchTab) showTab("groups", false);
+      setActive(link.dataset.source);
+      playlist.href = link.dataset.playlist;
+      try { await loadJson(link.dataset.json, link.dataset.name, link.dataset.source); }
+      catch (error) { stop(error.message || "Load failed"); render([]); }
+    }
+
+    async function search(q) {
+      playlist.href = "/search.m3u?q=" + encodeURIComponent(q);
+      try {
+        await loadJson("/search.json?q=" + encodeURIComponent(q), "搜索：" + q, "");
+        setActive("");
+      } catch (error) {
+        stop(error.message || "Search failed");
+        render([]);
+      }
+    }
+
+    async function loadLocal() {
+      if (localChannels) return localChannels;
+      const text = await fetch("index.m3u").then((r) => {
+        if (!r.ok) throw new Error("index.m3u not found");
+        return r.text();
+      });
+      localChannels = parseM3U(text);
+      return localChannels;
+    }
+
+    function parseM3U(text) {
+      const lines = text.split(/\r?\n/), out = [];
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line.startsWith("#EXTINF")) continue;
+        let url = "", j = i + 1, attrs = {}, m;
+        const re = /([\w-]+)="([^"]*)"/g;
+        while ((m = re.exec(line))) attrs[m[1].toLowerCase()] = m[2];
+        for (; j < lines.length; j++) {
+          const next = lines[j].trim();
+          if (next && !next.startsWith("#")) { url = next; break; }
+        }
+        const name = line.includes(",") ? line.slice(line.lastIndexOf(",") + 1).trim() : "";
+        const tvg = attrs["tvg-id"] || "";
+        const c = (tvg.match(/\.([a-z]{2})(?:@|$)/i) || [])[1] || "";
+        out.push({ name, tvg_id: tvg, tvg_name: attrs["tvg-name"] || "", group_title: attrs["group-title"] || "", logo: attrs["tvg-logo"] || "", url, country: c.toLowerCase(), text: (line + "\n" + url).toLowerCase() });
+        i = j;
+      }
+      return out;
+    }
+
+    function sourceMatch(id, x) {
+      if (id === "all") return true;
+      if (id === "china") return ["cn", "hk", "mo", "tw"].includes(x.country);
+      if (id === "mainland") return x.country === "cn";
+      if (id === "hongkong") return x.country === "hk";
+      if (id === "macau") return x.country === "mo";
+      if (id === "taiwan") return x.country === "tw";
+      return x.text.includes(id);
+    }
+
+    async function localSource(id) {
+      const xs = (await loadLocal()).filter((x) => sourceMatch(id, x));
+      return { ok: true, count: xs.length, results: xs.slice(0, 100) };
+    }
+
+    async function localSearch(q) {
+      const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
+      const xs = (await loadLocal()).filter((x) => terms.every((t) => t.startsWith("country:") ? x.country === t.slice(8) : x.text.includes(t)));
+      return { ok: true, count: xs.length, results: xs.slice(0, 100) };
+    }
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const q = input.value.trim();
+      if (q) search(q);
+      else loadSource($(`[data-source="${document.querySelector("main").dataset.defaultSource}"]`));
+    });
+
+    document.body.addEventListener("click", async (event) => {
+      const tab = event.target.closest("[data-tab]");
+      if (tab) { showTab(tab.dataset.tab); return; }
+
+      const source = event.target.closest("[data-source]");
+      if (source) {
+        event.preventDefault();
+        loadSource(source);
+        return;
+      }
+
+      const favorite = event.target.closest("[data-favorite]");
+      if (favorite) {
+        const item = current[Number(favorite.dataset.favorite)];
+        const list = favs();
+        const exists = list.some((x) => favKey(x) === favKey(item));
+        saveFavs(exists ? list.filter((x) => favKey(x) !== favKey(item)) : [item, ...list]);
+        render(current);
+        return;
+      }
+
+      const favOpen = event.target.closest("[data-fav-open]");
+      if (favOpen) {
+        const item = favs()[Number(favOpen.dataset.favOpen)];
+        if (item) render([item]);
+        return;
+      }
+
+      const copy = event.target.closest("[data-copy]");
+      if (copy) {
+        const text = copy.dataset.copy;
+        try {
+          await navigator.clipboard.writeText(text);
+          copy.textContent = "已复制";
+          setTimeout(() => { copy.textContent = "复制链接"; }, 1200);
+        } catch (error) {
+          window.prompt("复制链接", text);
+        }
+      }
+    });
+
+    input.addEventListener("input", () => {
+      const q = input.value.trim();
+      playlist.href = q ? "/search.m3u?q=" + encodeURIComponent(q) : "/china";
+    });
+
+    hydrateHost();
+    hydrateSources();
+    renderFavList();
+    loadSource($(`[data-source="${document.querySelector("main").dataset.defaultSource}"]`));
+  </script>
 </body>
 </html>
