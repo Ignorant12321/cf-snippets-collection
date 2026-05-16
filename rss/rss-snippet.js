@@ -8,8 +8,8 @@ const CONFIG = {
   edgeCacheTtlSeconds: 300,
   homepageCacheTtlSeconds: 300,
   rssHubInstances: {
-    default: "https://rsshub.pseudoyu.com",
-    rssforever: "https://rsshub.rssforever.com",
+    default: "https://rsshub.rssforever.com",
+    pseudoyu: "https://rsshub.pseudoyu.com",
   },
   allowedOrigins: [
     "http://localhost:4321",

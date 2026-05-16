@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IPTV Sources</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23171814'/%3E%3Cpath d='M8 11h16v10H8z' fill='%23fffaf0'/%3E%3Cpath d='M11 14h10' stroke='%23b42318' stroke-width='2.2' stroke-linecap='round'/%3E%3Cpath d='M11 18h6' stroke='%230b7285' stroke-width='2.2' stroke-linecap='round'/%3E%3Cpath d='M13 25h6' stroke='%23fffaf0' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E" type="image/svg+xml">
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f4f1e8;
+      --fg: #171814;
+      --muted: #69665d;
+      --line: #d7d0bf;
+      --panel: #fffaf0;
+      --accent: #b42318;
+      --accent-2: #0b7285;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #151512;
+        --fg: #f4efe2;
+        --muted: #aaa394;
+        --line: #3b382f;
+        --panel: #1f1e19;
+        --accent: #ff6b5f;
+        --accent-2: #66d9e8;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(90deg, color-mix(in srgb, var(--line) 58%, transparent) 1px, transparent 1px),
+        linear-gradient(0deg, color-mix(in srgb, var(--line) 40%, transparent) 1px, transparent 1px),
+        var(--bg);
+      background-size: 44px 44px;
+      color: var(--fg);
+      font: 16px/1.6 "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    }
+
+    main {
+      width: min(860px, calc(100% - 36px));
+      margin: 0 auto;
+      padding: 56px 0;
+    }
+
+    .mast {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: end;
+      padding-bottom: 28px;
+      border-bottom: 2px solid var(--fg);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.25rem, 8vw, 5.5rem);
+      line-height: 0.92;
+      letter-spacing: 0;
+    }
+
+    .badge {
+      border: 2px solid var(--fg);
+      padding: 10px 14px;
+      background: var(--panel);
+      font: 0.78rem/1.25 ui-monospace, SFMono-Regular, Consolas, monospace;
+      text-transform: uppercase;
+    }
+
+    .intro {
+      max-width: 680px;
+      margin: 22px 0 34px;
+      color: var(--muted);
+    }
+
+    .sources {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .source a {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 20px;
+      align-items: center;
+      min-height: 78px;
+      padding: 18px 0;
+      color: inherit;
+      text-decoration: none;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .source strong {
+      display: block;
+      font-size: 1.1rem;
+    }
+
+    .source small {
+      display: block;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .source a:hover strong,
+    .source a:focus-visible strong {
+      color: var(--accent);
+    }
+
+    code {
+      color: var(--accent-2);
+      font: 0.9rem/1.4 ui-monospace, SFMono-Regular, Consolas, monospace;
+      overflow-wrap: anywhere;
+    }
+
+    footer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      margin-top: 34px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    footer a {
+      color: inherit;
+      text-decoration-color: var(--line);
+      text-underline-offset: 4px;
+    }
+
+    @media (max-width: 620px) {
+      main {
+        width: min(100% - 28px, 860px);
+        padding: 40px 0;
+      }
+
+      .mast {
+        grid-template-columns: 1fr;
+        align-items: start;
+      }
+
+      .badge {
+        width: max-content;
+        max-width: 100%;
+      }
+
+      .source a {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="mast" aria-labelledby="title">
+      <h1 id="title">IPTV Sources</h1>
+      <div class="badge">iptv.ssr.ddns-ip.net</div>
+    </section>
+    <p class="intro">主页返回这个目录页；下面每个路径返回 M3U 播放列表，可直接填入 PotPlayer、VLC 或其他 IPTV 播放器。</p>
+    <ul class="sources">
+      <li class="source">
+        <a href="/china">
+          <span>
+            <strong>国内及港澳台频道</strong>
+            <small>按 tvg-id 地区后缀筛选中国大陆、香港、澳门、台湾频道。</small>
+          </span>
+          <code>/china</code>
+        </a>
+      </li>
+      <li class="source">
+        <a href="/mainland">
+          <span>
+            <strong>中国大陆频道</strong>
+            <small>筛选 tvg-id 为 .cn 的频道，包含央视、卫视、地方台等。</small>
+          </span>
+          <code>/mainland</code>
+        </a>
+      </li>
+      <li class="source">
+        <a href="/hongkong">
+          <span>
+            <strong>香港频道</strong>
+            <small>筛选 tvg-id 为 .hk 的频道，包含 RTHK、HOY、TVB 等。</small>
+          </span>
+          <code>/hongkong</code>
+        </a>
+      </li>
+      <li class="source">
+        <a href="/macau">
+          <span>
+            <strong>澳门频道</strong>
+            <small>筛选 tvg-id 为 .mo 的频道，包含 TDM、澳门、澳門相关频道。</small>
+          </span>
+          <code>/macau</code>
+        </a>
+      </li>
+      <li class="source">
+        <a href="/taiwan">
+          <span>
+            <strong>台湾频道</strong>
+            <small>筛选 tvg-id 为 .tw 的频道，包含民视、华视、TVBS、三立、东森等。</small>
+          </span>
+          <code>/taiwan</code>
+        </a>
+      </li>
+      <li class="source">
+        <a href="/cctv">
+          <span>
+            <strong>CCTV</strong>
+            <small>只保留 CCTV 频道。</small>
+          </span>
+          <code>/cctv</code>
+        </a>
+      </li>
+      <li class="source">
+        <a href="/cgtn">
+          <span>
+            <strong>CGTN</strong>
+            <small>只保留 CGTN 频道。</small>
+          </span>
+          <code>/cgtn</code>
+        </a>
+      </li>
+      <li class="source">
+        <a href="/all">
+          <span>
+            <strong>完整 IPTV.org</strong>
+            <small>返回 IPTV.org index.m3u 完整源。</small>
+          </span>
+          <code>/all</code>
+        </a>
+      </li>
+    </ul>
+    <footer>
+      <span>主页：<code>https://iptv.ssr.ddns-ip.net</code></span>
+      <span>JSON：<a href="/sources">/sources</a></span>
+    </footer>
+  </main>
+</body>
+</html>
