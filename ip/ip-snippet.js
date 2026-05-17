@@ -1,6 +1,7 @@
 const CONFIG = {
   proxycheckEndpoint: "https://proxycheck.io/v3/",
-  proxycheckVersion: "20-November-2025",
+  // Cloudflare Snippets do not expose this source to visitors, but dashboard/API editors can still read it.
+  proxycheckApiKeys: [],
   riskCacheSeconds: 600,
   htmlCacheSeconds: 300,
   maxTargetLength: 253,
@@ -18,6 +19,8 @@ const SAFE_HEADER_NAMES = [
   "x-forwarded-proto",
   "x-real-ip",
 ];
+
+const proxycheckKeyCursors = new Map();
 
 export default {
   async fetch(request, env, ctx) {
@@ -37,7 +40,7 @@ export async function handleRequest(request, env = {}, ctx = {}, deps = {}) {
     return jsonResponse({ ok: false, error: "Method Not Allowed" }, 405, request);
   }
 
-  if (pathname === "/") {
+  if (pathname === "/" || pathname.startsWith("/ip/")) {
     return htmlResponse(renderHomePage(), request);
   }
 
@@ -176,9 +179,9 @@ async function lookupRiskIntel(targetIp, env, fetcher) {
   }
 }
 
-export function buildProxycheckUrl(target, env = {}) {
-  const url = new URL(CONFIG.proxycheckEndpoint + encodeURIComponent(target));
-  const key = env.PROXYCHECK_API_KEY || env.PROXYCHECK_KEY || "";
+export function buildProxycheckUrl(target, env = {}, config = CONFIG) {
+  const url = new URL(config.proxycheckEndpoint + encodeURIComponent(target));
+  const key = selectProxycheckKey(env, config);
 
   url.searchParams.set("risk", "1");
   url.searchParams.set("vpn", "3");
@@ -186,13 +189,42 @@ export function buildProxycheckUrl(target, env = {}) {
   url.searchParams.set("node", "1");
   url.searchParams.set("days", "7");
   url.searchParams.set("tag", "0");
-  url.searchParams.set("ver", CONFIG.proxycheckVersion);
 
   if (key) {
     url.searchParams.set("key", key);
   }
 
   return url;
+}
+
+function selectProxycheckKey(env = {}, config = CONFIG) {
+  const keys = getProxycheckKeys(env, config);
+
+  if (keys.length === 0) {
+    return "";
+  }
+
+  if (keys.length === 1) {
+    return keys[0];
+  }
+
+  const poolId = keys.join("\n");
+  const cursor = proxycheckKeyCursors.get(poolId) || 0;
+  proxycheckKeyCursors.set(poolId, (cursor + 1) % keys.length);
+
+  return keys[cursor];
+}
+
+function getProxycheckKeys(env = {}, config = CONFIG) {
+  const multi = firstDefined(env.PROXYCHECK_API_KEYS, env.PROXYCHECK_KEYS);
+  const single = firstDefined(env.PROXYCHECK_API_KEY, env.PROXYCHECK_KEY);
+  const snippetKeys = Array.isArray(config.proxycheckApiKeys) ? config.proxycheckApiKeys.join("\n") : config.proxycheckApiKeys;
+  const raw = multi || single || snippetKeys || "";
+
+  return String(raw)
+    .split(/[\s,;]+/)
+    .map((key) => key.trim())
+    .filter(Boolean);
 }
 
 export function normalizeRiskIntel(payload, target) {
@@ -230,6 +262,8 @@ export function normalizeRiskIntel(payload, target) {
   const vpn = booleanish(firstDefined(detections.vpn, entry.vpn));
   const tor = booleanish(firstDefined(detections.tor, detections.TOR, entry.tor));
   const hosting = booleanish(firstDefined(detections.hosting, entry.hosting));
+  const compromised = booleanish(firstDefined(detections.compromised, entry.compromised));
+  const scraper = booleanish(firstDefined(detections.scraper, entry.scraper));
   const anonymous = booleanish(firstDefined(detections.anonymous, entry.anonymous, proxy || vpn || tor));
   const type = firstDefined(network.type, entry.type, detections.type);
 
@@ -242,6 +276,8 @@ export function normalizeRiskIntel(payload, target) {
     vpn,
     tor,
     hosting,
+    compromised,
+    scraper,
     anonymous,
     type: type || null,
     provider: firstDefined(network.provider, entry.provider) || null,
@@ -249,11 +285,23 @@ export function normalizeRiskIntel(payload, target) {
     asn: firstDefined(network.asn, entry.asn) || null,
     range: network.range || null,
     hostname: network.hostname || entry.hostname || null,
-    country: firstDefined(location.country, entry.country) || null,
-    city: firstDefined(location.city, entry.city) || null,
+    continent: firstDefined(location.continent_name, location.continentName, entry.continent_name, entry.continent) || null,
+    continentCode: firstDefined(location.continent_code, location.continentCode, entry.continent_code) || null,
+    country: firstDefined(location.country_name, location.country, entry.country_name, entry.country) || null,
+    countryCode: firstDefined(location.country_code, location.countryCode, entry.country_code) || null,
+    region: firstDefined(location.region_name, location.region, entry.region_name, entry.region) || null,
+    regionCode: firstDefined(location.region_code, location.regionCode, entry.region_code) || null,
+    city: firstDefined(location.city_name, location.city, entry.city_name, entry.city) || null,
+    postalCode: firstDefined(location.postal_code, location.postalCode, entry.postal_code) || null,
+    latitude: numberOrNull(firstDefined(location.latitude, entry.latitude)),
+    longitude: numberOrNull(firstDefined(location.longitude, entry.longitude)),
+    timezone: firstDefined(location.timezone, entry.timezone) || null,
+    currencyCode: firstDefined(location.currency?.code, entry.currency?.code) || null,
+    currencyName: firstDefined(location.currency?.name, entry.currency?.name) || null,
     sharedEstimate: getSharedEstimate(deviceEstimate),
     deviceEstimate: normalizeDeviceEstimate(deviceEstimate),
     attackHistory: normalizeAttackHistory(attackHistory),
+    detectionHistory: normalizeDetectionHistory(entry.detection_history || entry.detectionHistory),
     operator: normalizeOperator(entry.operator),
     lastSeen: firstDefined(detections.last_seen, entry.last_seen, entry["last seen human"]) || null,
     firstSeen: firstDefined(detections.first_seen, entry.first_seen) || null,
@@ -303,7 +351,7 @@ function getSharedEstimate(value) {
   const subnetCount = firstDefined(value.subnet_count, value.subnetCount, value.subnet);
 
   if (addressCount && subnetCount) {
-    return `${addressCount} / subnet ${subnetCount}`;
+    return `地址 ${addressCount} / 子网 ${subnetCount}`;
   }
 
   if (addressCount) {
@@ -311,7 +359,7 @@ function getSharedEstimate(value) {
   }
 
   if (subnetCount) {
-    return `subnet ${subnetCount}`;
+    return `子网 ${subnetCount}`;
   }
 
   return null;
@@ -590,27 +638,27 @@ function applyCors(headers, request) {
   headers.set("vary", "Origin");
 }
 
-function renderHomePage() {
-  return `<!doctype html>
+const HOME_HTML = String.raw`<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>IP 检测</title>
+  <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%2355d6c2"/><text x="32" y="40" text-anchor="middle" font-family="Arial" font-size="24" font-weight="900" fill="%23061413">IP</text></svg>'>
   <style>
     :root {
       color-scheme: dark;
-      --ink: #eef8ff;
-      --muted: #9fb0c3;
-      --line: rgba(218, 237, 255, 0.14);
-      --panel: rgba(25, 36, 54, 0.82);
-      --panel-strong: rgba(42, 53, 76, 0.9);
-      --cyan: #7df0e1;
-      --mint: #7be495;
-      --gold: #ffd166;
-      --coral: #ff6f61;
-      --violet: #9d8cff;
-      --shadow: rgba(0, 0, 0, 0.38);
+      --bg: #0b1115;
+      --panel: #111b22;
+      --panel-2: #16232b;
+      --ink: #eef7f6;
+      --muted: #8ea1a8;
+      --line: rgba(210, 235, 231, .14);
+      --cyan: #55d6c2;
+      --gold: #e7c766;
+      --coral: #e46f5c;
+      --green: #74d384;
+      --shadow: rgba(0, 0, 0, .32);
     }
 
     * {
@@ -620,25 +668,14 @@ function renderHomePage() {
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: ui-rounded, "Aptos", "Segoe UI", "Microsoft YaHei", sans-serif;
+      font-family: "Aptos", "Segoe UI", "Microsoft YaHei", sans-serif;
       color: var(--ink);
       background:
-        radial-gradient(circle at 9% 12%, rgba(125, 240, 225, 0.18), transparent 29rem),
-        radial-gradient(circle at 84% 16%, rgba(157, 140, 255, 0.16), transparent 30rem),
-        linear-gradient(135deg, #07131a 0%, #161824 46%, #231f35 100%);
+        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px),
+        linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px),
+        linear-gradient(135deg, #081015, #111820 48%, #161a20);
+      background-size: 36px 36px, 36px 36px, auto;
       overflow-x: hidden;
-    }
-
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      background-image:
-        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px);
-      background-size: 44px 44px;
-      mask-image: linear-gradient(to bottom, rgba(0,0,0,.6), transparent 80%);
     }
 
     button,
@@ -647,169 +684,161 @@ function renderHomePage() {
     }
 
     .shell {
-      width: min(1480px, calc(100% - 40px));
+      width: min(1240px, calc(100% - 32px));
+      min-height: 100vh;
       margin: 0 auto;
-      padding: 30px 0 36px;
-    }
-
-    .top-grid {
+      padding: 20px 0 24px;
       display: grid;
-      grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.8fr);
-      gap: 22px;
-      align-items: stretch;
+      grid-template-rows: auto 1fr;
+      gap: 14px;
     }
 
-    .hero,
-    .side,
+    .topbar,
     .panel {
       border: 1px solid var(--line);
-      background: linear-gradient(142deg, rgba(29, 48, 61, 0.9), rgba(27, 31, 48, 0.84) 50%, rgba(54, 48, 77, 0.78));
-      box-shadow: 0 20px 70px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.05);
-      backdrop-filter: blur(18px);
+      background: linear-gradient(155deg, rgba(18, 30, 38, .96), rgba(14, 21, 27, .94));
+      box-shadow: 0 18px 50px var(--shadow), inset 0 1px 0 rgba(255,255,255,.04);
     }
 
-    .hero {
-      min-height: 470px;
-      border-radius: 30px 30px 8px 30px;
-      padding: 36px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .hero::after {
-      content: "";
-      position: absolute;
-      inset: auto -8% -38% 38%;
-      height: 56%;
-      background: linear-gradient(110deg, rgba(125,240,225,.22), rgba(255,111,97,.1), rgba(157,140,255,.2));
-      transform: rotate(-8deg);
-      filter: blur(18px);
-      pointer-events: none;
-    }
-
-    .nav {
-      display: flex;
+    .topbar {
+      min-height: 66px;
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: grid;
+      grid-template-columns: 1fr auto;
       align-items: center;
-      justify-content: space-between;
-      gap: 18px;
-      position: relative;
-      z-index: 1;
+      gap: 12px;
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 12px;
-      color: var(--muted);
-      font-size: 18px;
+      gap: 10px;
+      min-width: 0;
     }
 
     .badge {
-      width: 44px;
-      height: 44px;
+      width: 42px;
+      height: 42px;
       display: grid;
       place-items: center;
-      border-radius: 14px;
+      border-radius: 8px;
+      color: #061413;
       background: var(--cyan);
-      color: #06252b;
       font-weight: 900;
+      flex: 0 0 auto;
+    }
+
+    h1,
+    h2,
+    p {
+      margin: 0;
       letter-spacing: 0;
-      box-shadow: 0 0 38px rgba(125, 240, 225, .35);
+    }
+
+    h1 {
+      font-size: 22px;
+      line-height: 1.1;
+    }
+
+    .subtitle {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
     }
 
     .actions {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
       justify-content: flex-end;
+      gap: 8px;
     }
 
     .chip,
     .icon-button {
-      min-height: 44px;
-      border: 1px solid rgba(255,255,255,.16);
-      border-radius: 999px;
+      min-height: 38px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 8px;
       color: var(--ink);
-      background: rgba(255,255,255,.07);
+      background: rgba(255,255,255,.06);
       cursor: pointer;
-      transition: transform .18s ease, border-color .18s ease, background .18s ease;
+      transition: border-color .16s ease, background .16s ease, transform .16s ease;
     }
 
     .chip {
-      padding: 0 17px;
+      padding: 0 12px;
+      white-space: nowrap;
     }
 
     .chip:hover,
     .icon-button:hover {
+      border-color: rgba(85, 214, 194, .55);
+      background: rgba(85, 214, 194, .12);
       transform: translateY(-1px);
-      border-color: rgba(125,240,225,.45);
-      background: rgba(125,240,225,.12);
     }
 
-    .copy-state {
-      min-width: 92px;
+    .dashboard {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(360px, .86fr);
+      gap: 14px;
+      align-content: start;
     }
 
-    h1 {
-      margin: 58px 0 12px;
-      font-size: clamp(56px, 7vw, 98px);
-      line-height: .95;
-      letter-spacing: 0;
-      position: relative;
-      z-index: 1;
+    .main-stack,
+    .side-stack {
+      display: grid;
+      gap: 14px;
+      min-width: 0;
     }
 
-    .subtitle {
-      margin: 0;
-      max-width: 800px;
-      color: var(--muted);
-      font-size: clamp(17px, 2vw, 22px);
-      line-height: 1.6;
-      position: relative;
-      z-index: 1;
+    .side-stack {
+      align-content: start;
+      align-items: start;
     }
 
-    .ip-card {
-      margin-top: 36px;
-      border: 1px solid rgba(218,237,255,.16);
-      border-radius: 26px 26px 8px 26px;
-      padding: 26px;
-      background: linear-gradient(115deg, rgba(94, 150, 158, .36), rgba(74, 68, 110, .55));
-      position: relative;
-      z-index: 1;
+    .panel {
+      border-radius: 8px;
+      padding: 18px;
+      min-width: 0;
+    }
+
+    .query-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 16px;
+      align-items: stretch;
     }
 
     .label {
       color: var(--muted);
-      font-size: 15px;
-      margin-bottom: 12px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
     }
 
     .ip-row {
+      min-height: 66px;
+      margin-top: 10px;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       flex-wrap: wrap;
     }
 
     .ip-value {
-      margin: 0;
       font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
-      font-size: clamp(34px, 5.4vw, 66px);
-      line-height: 1;
-      letter-spacing: 0;
+      font-size: clamp(30px, 5vw, 58px);
+      line-height: 1.04;
       word-break: break-word;
     }
 
     .edit-form {
       display: none;
-      width: min(100%, 760px);
-      gap: 10px;
+      min-height: 66px;
+      margin-top: 10px;
+      gap: 8px;
       align-items: center;
-      flex-wrap: wrap;
     }
 
     .edit-form.active {
@@ -817,267 +846,371 @@ function renderHomePage() {
     }
 
     .edit-form input {
-      flex: 1 1 300px;
-      min-height: 58px;
+      flex: 1 1 240px;
       min-width: 0;
-      border: 1px solid rgba(255,255,255,.18);
-      border-radius: 18px;
-      padding: 0 16px;
+      min-height: 44px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 8px;
+      padding: 0 12px;
       color: var(--ink);
       background: rgba(0,0,0,.22);
       outline: none;
     }
 
+    .edit-form input:focus {
+      border-color: rgba(85, 214, 194, .62);
+      box-shadow: 0 0 0 3px rgba(85, 214, 194, .12);
+    }
+
     .icon-button {
-      width: 44px;
-      height: 44px;
+      width: 38px;
+      height: 38px;
       display: inline-grid;
       place-items: center;
       padding: 0;
     }
 
-    .edit-button {
-      opacity: .62;
-    }
-
     .pills {
+      margin-top: 12px;
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 20px;
+      gap: 7px;
     }
 
     .pill {
-      border: 1px solid rgba(255,255,255,.14);
-      border-radius: 999px;
-      padding: 9px 13px;
+      min-height: 30px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 8px;
+      padding: 6px 9px;
       color: var(--muted);
-      background: rgba(255,255,255,.05);
-      min-width: 58px;
-      text-align: center;
-    }
-
-    .side {
-      border-radius: 30px 30px 30px 8px;
-      padding: 28px;
-      display: grid;
-      gap: 16px;
-    }
-
-    .stat {
-      min-height: 144px;
-      border: 1px solid rgba(255,255,255,.14);
-      border-radius: 24px 24px 8px 24px;
-      padding: 22px;
-      background: rgba(255,255,255,.055);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .stat strong {
-      display: block;
-      margin-top: 8px;
-      font-size: clamp(21px, 2.2vw, 28px);
-      line-height: 1.22;
+      background: rgba(255,255,255,.045);
+      font-size: 13px;
       word-break: break-word;
     }
 
-    .content-grid {
+    .pill.active {
+      border-color: rgba(228, 111, 92, .8);
+      color: #fff4f1;
+      background: rgba(228, 111, 92, .28);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+    }
+
+    .risk-compact {
       display: grid;
-      grid-template-columns: minmax(300px, .72fr) minmax(0, 1fr);
-      gap: 22px;
-      margin-top: 22px;
+      align-content: space-between;
+      gap: 12px;
+      border-left: 1px solid var(--line);
+      padding-left: 16px;
     }
 
-    .panel {
-      border-radius: 28px 28px 8px 28px;
-      padding: 28px;
-      min-width: 0;
-    }
-
-    h2 {
-      margin: 0 0 22px;
-      font-size: 27px;
-      letter-spacing: 0;
-    }
-
-    .rows {
-      display: grid;
-      gap: 0;
-    }
-
-    .row {
-      display: grid;
-      grid-template-columns: minmax(116px, .42fr) minmax(0, 1fr);
-      gap: 18px;
-      padding: 17px 0;
-      border-bottom: 1px solid rgba(255,255,255,.09);
-      align-items: center;
-    }
-
-    .row span:first-child {
-      color: var(--muted);
-    }
-
-    .row strong,
-    .row code {
-      color: var(--ink);
-      font-size: 17px;
-      word-break: break-word;
-    }
-
-    .risk-head {
+    .risk-line {
       display: flex;
-      align-items: end;
+      align-items: flex-end;
       justify-content: space-between;
-      gap: 18px;
-      margin-bottom: 22px;
+      gap: 12px;
     }
 
     .risk-score {
-      font-size: clamp(44px, 5vw, 76px);
-      line-height: 1;
-      font-weight: 900;
       color: var(--gold);
+      font-size: clamp(44px, 6vw, 72px);
+      line-height: .9;
+      font-weight: 900;
     }
 
     .risk-meter {
-      height: 18px;
+      height: 12px;
       border-radius: 999px;
-      overflow: hidden;
-      background: linear-gradient(90deg, var(--mint), var(--gold), var(--coral));
+      background: linear-gradient(90deg, var(--green), var(--gold), var(--coral));
       border: 1px solid rgba(255,255,255,.12);
       position: relative;
+      overflow: hidden;
     }
 
     .risk-pin {
       position: absolute;
-      top: -6px;
-      width: 4px;
-      height: 30px;
-      border-radius: 4px;
-      background: #fff;
-      box-shadow: 0 0 18px rgba(255,255,255,.7);
+      top: -8px;
       left: 0;
-      transform: translateX(-2px);
+      width: 8px;
+      height: 30px;
+      border: 2px solid #0b1115;
+      border-radius: 999px;
+      background: #fff;
+      transform: translateX(-4px);
+      box-shadow: 0 0 0 1px rgba(255,255,255,.9), 0 0 16px rgba(255,255,255,.85);
     }
 
-    .risk-cards {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-      margin-top: 18px;
-    }
-
-    .mini {
-      min-height: 96px;
+    .stat {
+      min-width: 0;
       border: 1px solid rgba(255,255,255,.1);
-      border-radius: 16px 16px 6px 16px;
-      padding: 15px;
+      border-radius: 8px;
       background: rgba(255,255,255,.045);
+      padding: 13px;
     }
 
-    .mini b {
+    .stat strong {
       display: block;
-      margin-top: 8px;
-      font-size: 20px;
+      margin-top: 6px;
+      font-size: 17px;
+      line-height: 1.22;
       word-break: break-word;
     }
 
-    .json-box {
-      max-height: 300px;
-      overflow: auto;
-      margin: 22px 0 0;
-      padding: 18px;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,.1);
-      background: rgba(0,0,0,.24);
-      color: #d6f7ff;
-      font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+    .location-card {
+      min-height: 260px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .location-card.map-loaded::after {
+      display: none;
+    }
+
+    .location-head {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .location-refresh {
+      width: 30px;
+      height: 30px;
+      min-height: 30px;
+      border-radius: 7px;
+      font-size: 15px;
+    }
+
+    .location-card::after {
+      content: "";
+      position: absolute;
+      inset: auto 18px 18px auto;
+      width: 160px;
+      height: 84px;
+      opacity: .16;
+      background:
+        radial-gradient(circle at 30% 45%, var(--cyan) 0 4px, transparent 5px),
+        linear-gradient(135deg, transparent 48%, rgba(85,214,194,.9) 49% 51%, transparent 52%),
+        linear-gradient(45deg, transparent 48%, rgba(85,214,194,.55) 49% 51%, transparent 52%);
+      background-size: auto, 28px 28px, 28px 28px;
+      border: 1px solid rgba(85,214,194,.25);
+      border-radius: 8px;
+      pointer-events: none;
+    }
+
+    .map-box {
+      position: absolute;
+      inset: 88px 14px 14px;
+      z-index: 1;
+      border: 1px solid rgba(85,214,194,.25);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 30% 45%, rgba(85,214,194,.9) 0 4px, transparent 5px),
+        linear-gradient(135deg, transparent 48%, rgba(85,214,194,.24) 49% 51%, transparent 52%),
+        linear-gradient(45deg, transparent 48%, rgba(85,214,194,.16) 49% 51%, transparent 52%);
+      background-size: auto, 28px 28px, 28px 28px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+
+    .map-box span {
+      color: var(--muted);
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 7px;
+      background: rgba(8,16,21,.72);
+    }
+
+    .map-box iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      filter: saturate(.82) contrast(.95);
+    }
+
+    .side-compact {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(210px, .72fr);
+      gap: 10px;
+      align-items: start;
+    }
+
+    .side-compact .stat {
+      min-height: 58px;
+      padding: 8px 10px;
+    }
+
+    .side-compact .stat strong {
+      margin-top: 4px;
+      font-size: 14px;
+      line-height: 1.12;
+    }
+
+    .risk-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .risk-value {
+      color: var(--gold);
+      font-size: clamp(24px, 3vw, 34px);
+      line-height: .9;
+      text-align: right;
+    }
+
+    .risk-evaluation .risk-meter {
+      height: 6px;
+      margin-top: 7px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .row {
+      min-width: 0;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      padding: 10px 0;
+      display: grid;
+      grid-template-columns: 88px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+    }
+
+    .row span {
+      color: var(--muted);
       font-size: 13px;
-      line-height: 1.6;
-      white-space: pre-wrap;
+    }
+
+    .row strong {
+      font-size: 14px;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+
+    .jump-grid {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .jump-link {
+      min-height: 58px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 8px;
+      padding: 12px 14px;
+      color: var(--ink);
+      background: rgba(255,255,255,.045);
+      text-decoration: none;
+      display: grid;
+      align-content: center;
+      gap: 4px;
+    }
+
+    .jump-link span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .jump-link:hover {
+      border-color: rgba(85, 214, 194, .55);
+      background: rgba(85, 214, 194, .1);
     }
 
     .loading {
-      opacity: .72;
+      opacity: .68;
     }
 
     .error {
-      color: #ffb3aa;
+      color: #ffb4aa;
     }
 
-    @media (max-width: 980px) {
-      .top-grid,
-      .content-grid {
+    @media (max-width: 920px) {
+      .shell {
+        width: min(100% - 24px, 1240px);
+      }
+
+      .topbar,
+      .dashboard,
+      .query-panel,
+      .info-grid {
         grid-template-columns: 1fr;
       }
 
-      .hero,
-      .side,
-      .panel {
-        border-radius: 24px 24px 8px 24px;
+      .risk-compact {
+        border-left: 0;
+        border-top: 1px solid var(--line);
+        padding-left: 0;
+        padding-top: 14px;
       }
     }
 
-    @media (max-width: 640px) {
+    @media (max-width: 560px) {
       .shell {
-        width: min(100% - 24px, 1480px);
-        padding-top: 14px;
+        width: min(100% - 18px, 1240px);
+        padding-top: 10px;
       }
 
-      .hero,
-      .side,
+      .topbar,
       .panel {
-        padding: 20px;
+        padding: 14px;
       }
 
-      .nav {
-        align-items: flex-start;
-        flex-direction: column;
+      .actions,
+      .edit-form {
+        width: 100%;
       }
 
-      .actions {
-        justify-content: flex-start;
-      }
-
-      .risk-cards {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+      .chip {
+        flex: 1 1 auto;
+        text-align: center;
       }
 
       .row {
         grid-template-columns: 1fr;
-        gap: 6px;
+        gap: 4px;
+      }
+
+      .jump-grid,
+      .side-compact {
+        grid-template-columns: 1fr;
       }
     }
   </style>
 </head>
 <body>
   <main class="shell">
-    <section class="top-grid">
-      <div class="hero">
-        <div class="nav">
-          <div class="brand">
-            <span class="badge">IP</span>
-            <span>CF Snippets Network Check</span>
-          </div>
-          <div class="actions">
-            <button class="chip copy-state" data-action="copy-ip">复制IP</button>
-            <button class="chip" data-action="copy-json">JSON</button>
-            <button class="chip" data-action="copy-report">Report</button>
-          </div>
-        </div>
-
+    <header class="topbar">
+      <div class="brand">
+        <span class="badge">IP</span>
         <div>
           <h1>IP 检测</h1>
-          <p class="subtitle">查看公网 IP、网络位置、Cloudflare 边缘节点、请求头与 proxycheck.io 风控情报。</p>
+          <p class="subtitle">公网地址、网络归属与 proxycheck.io 风控情报。</p>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="chip" type="button" data-action="refresh">刷新</button>
+        <button class="chip" type="button" data-action="copy-ip">复制IP</button>
+        <button class="chip" type="button" data-action="export-image">图片</button>
+        <button class="chip" type="button" data-action="copy-report">Report</button>
+      </div>
+    </header>
 
-          <section class="ip-card">
-            <div class="label">你的公网IP</div>
+    <section class="dashboard">
+      <div class="main-stack">
+        <section class="panel query-panel">
+          <div>
+            <div class="label">查询目标</div>
             <div class="ip-row" id="ipDisplay">
               <p class="ip-value loading" data-field="ip">检测中</p>
-              <button class="icon-button edit-button" type="button" data-action="edit-target" aria-label="修改查询目标" title="修改查询目标">✎</button>
+              <button class="icon-button" type="button" data-action="edit-target" aria-label="修改查询目标" title="修改查询目标">✎</button>
             </div>
             <form class="edit-form" id="editForm">
               <input id="targetInput" name="target" autocomplete="off" placeholder="输入 IP 或域名">
@@ -1085,68 +1218,72 @@ function renderHomePage() {
               <button class="icon-button" type="button" data-action="cancel-edit" aria-label="取消">×</button>
             </form>
             <div class="pills">
-              <span class="pill" data-field="ipVersion">--</span>
-              <span class="pill" data-field="country">--</span>
-              <span class="pill" data-field="colo">Colo --</span>
-              <span class="pill" data-field="http">HTTP --</span>
+              <span class="pill" data-flag="proxy">Proxy</span>
+              <span class="pill" data-flag="vpn">VPN</span>
+              <span class="pill" data-flag="tor">Tor</span>
+              <span class="pill" data-flag="hosting">Hosting</span>
+              <span class="pill" data-flag="scraper">Scraper</span>
+              <span class="pill" data-flag="compromised">Compromised</span>
             </div>
-          </section>
-        </div>
-      </div>
+          </div>
+        </section>
 
-      <aside class="side">
-        <div class="stat">
-          <span class="label">网络位置</span>
-          <strong data-field="location">--</strong>
-        </div>
-        <div class="stat">
-          <span class="label">ASN/运营商</span>
-          <strong data-field="asn">--</strong>
-        </div>
-        <div class="stat">
-          <span class="label">Cloudflare节点</span>
-          <strong data-field="cfNode">--</strong>
-        </div>
-      </aside>
-    </section>
-
-    <section class="content-grid">
-      <section class="panel">
-        <h2>网络信息</h2>
-        <div class="rows">
+        <section class="panel info-grid">
           <div class="row"><span>IP类型</span><strong data-field="netType">--</strong></div>
           <div class="row"><span>国家/地区</span><strong data-field="countryFull">--</strong></div>
           <div class="row"><span>时区</span><strong data-field="timezone">--</strong></div>
           <div class="row"><span>经纬度</span><strong data-field="coords">--</strong></div>
-          <div class="row"><span>请求语言</span><strong data-field="language">--</strong></div>
-        </div>
-      </section>
+        </section>
 
-      <section class="panel">
-        <div class="risk-head">
-          <div>
-            <h2>风控情报</h2>
-            <div class="label" data-field="riskSource">proxycheck.io</div>
+        <section class="panel">
+          <div class="label">外部查询</div>
+          <div class="jump-grid" data-field="jumpLinks">
+            <a class="jump-link" data-jump="ping0" href="https://ping0.cc/ip/" target="_blank" rel="noopener noreferrer">
+              Ping0.cc
+              <span>ping0.cc/ip/IP</span>
+            </a>
+            <a class="jump-link" data-jump="ippure" href="https://ippure.com/" target="_blank" rel="noopener noreferrer">
+              IPPure
+              <span>ippure.com/?ip=IP</span>
+            </a>
           </div>
-          <div class="risk-score" data-field="riskScore">--</div>
+        </section>
+      </div>
+
+      <aside class="side-stack">
+        <section class="stat location-card">
+          <div class="location-head">
+            <span class="label">网络位置</span>
+            <button class="icon-button location-refresh" type="button" data-action="refresh-location" aria-label="刷新定位" title="刷新定位">↻</button>
+          </div>
+          <strong data-field="location">--</strong>
+          <div class="map-box" data-field="mapViewport"><span>按需加载地图</span></div>
+        </section>
+        <div class="side-compact">
+          <section class="stat">
+            <span class="label">ASN/运营商</span>
+            <strong data-field="asn">--</strong>
+          </section>
+          <section class="stat risk-evaluation">
+            <div class="risk-top">
+              <span class="label">风险评估</span>
+              <strong class="risk-value" data-field="riskScore">--</strong>
+            </div>
+            <div class="risk-meter" data-role="risk-meter">
+              <span class="risk-pin" data-field="riskPin"></span>
+            </div>
+          </section>
         </div>
-        <div class="risk-meter" data-role="risk-meter">
-          <span class="risk-pin" data-field="riskPin"></span>
-        </div>
-        <div class="risk-cards">
-          <div class="mini"><span class="label">风险等级</span><b data-field="riskLevel">--</b></div>
-          <div class="mini"><span class="label">共享人数</span><b data-field="shared">--</b></div>
-          <div class="mini"><span class="label">匿名网络</span><b data-field="anonymous">--</b></div>
-          <div class="mini"><span class="label">网络类型</span><b data-field="riskType">--</b></div>
-        </div>
-        <pre class="json-box" data-field="json">{}</pre>
-      </section>
+      </aside>
     </section>
   </main>
 
-  <script>
-    const state = { data: null, currentTarget: "" };
+    <script>
+    const state = { data: null, currentTarget: "", lastEndpoint: "", mapLoaded: false };
     const fields = Object.fromEntries([...document.querySelectorAll("[data-field]")].map((node) => [node.dataset.field, node]));
+    const flagPills = Object.fromEntries([...document.querySelectorAll("[data-flag]")].map((node) => [node.dataset.flag, node]));
+    const jumpLinks = Object.fromEntries([...document.querySelectorAll("[data-jump]")].map((node) => [node.dataset.jump, node]));
+    const locationCard = document.querySelector(".location-card");
     const editForm = document.getElementById("editForm");
     const ipDisplay = document.getElementById("ipDisplay");
     const targetInput = document.getElementById("targetInput");
@@ -1157,6 +1294,8 @@ function renderHomePage() {
     async function load(target = "") {
       setLoading();
       const endpoint = target ? "/api/lookup?target=" + encodeURIComponent(target) : "/api/me";
+      state.lastEndpoint = endpoint;
+
       try {
         const response = await fetch(endpoint, { headers: { accept: "application/json" } });
         const data = await response.json();
@@ -1164,10 +1303,12 @@ function renderHomePage() {
         state.data = data;
         state.currentTarget = data.query.target;
         render(data);
+        if (state.mapLoaded) renderMap(data);
+        return data;
       } catch (error) {
         fields.ip.textContent = "查询失败";
         fields.ip.classList.add("error");
-        fields.json.textContent = JSON.stringify({ error: error.message }, null, 2);
+        return null;
       }
     }
 
@@ -1177,6 +1318,7 @@ function renderHomePage() {
       fields.ip.classList.remove("error");
       fields.riskScore.textContent = "--";
       fields.riskPin.style.left = "0%";
+      updateFlagPills({});
     }
 
     function render(data) {
@@ -1185,33 +1327,140 @@ function renderHomePage() {
       const asn = network.asn || {};
       const cf = data.cloudflare || {};
       const risk = data.risk || {};
-      const cityLine = [loc.country, loc.region, loc.city].filter(Boolean).join(" • ");
       const asnLine = [asn.number ? "AS" + asn.number : risk.asn, asn.organization || risk.provider || risk.organisation].filter(Boolean).join(" • ");
       const score = Number.isFinite(risk.riskScore) ? risk.riskScore : null;
 
       fields.ip.classList.remove("loading", "error");
       fields.ip.textContent = network.ip || data.query.lookupIp || "--";
-      fields.ipVersion.textContent = network.version || "--";
-      fields.country.textContent = loc.country || risk.country || "--";
-      fields.colo.textContent = "Colo " + fmt(cf.colo);
-      fields.http.textContent = fmt(cf.httpProtocol, "HTTP --");
-      fields.location.textContent = cityLine || "--";
+      fields.location.textContent = toChineseLocation(loc, risk);
       fields.asn.textContent = asnLine || "--";
-      fields.cfNode.textContent = [cf.colo, cf.ray].filter(Boolean).join(" • ") || "--";
       fields.netType.textContent = risk.type || network.version || "--";
-      fields.countryFull.textContent = cityLine || risk.country || "--";
-      fields.timezone.textContent = loc.timezone || "--";
-      fields.coords.textContent = loc.latitude && loc.longitude ? loc.latitude + ", " + loc.longitude : "--";
-      fields.language.textContent = data.request?.acceptLanguage || "--";
+      fields.countryFull.textContent = getCountryLine(loc, risk);
+      fields.timezone.textContent = loc.timezone || risk.timezone || "--";
+      fields.coords.textContent = getCoordsLine(loc, risk);
       fields.riskScore.textContent = score === null ? "--" : String(score);
       fields.riskPin.style.left = (score === null ? 0 : score) + "%";
-      fields.riskLevel.textContent = translateRiskLevel(risk.riskLevel);
-      fields.shared.textContent = risk.sharedEstimate || "未知";
-      fields.anonymous.textContent = yesNo(risk.anonymous || risk.proxy || risk.vpn || risk.tor);
-      fields.riskType.textContent = risk.type || (risk.hosting ? "Hosting" : "--");
-      fields.riskSource.textContent = risk.status === "error" ? risk.message : "proxycheck.io";
-      fields.json.textContent = JSON.stringify(data, null, 2);
+      updateFlagPills(risk);
+      updateJumpLinks(network.ip || data.query.lookupIp || state.currentTarget || "");
       targetInput.value = state.currentTarget || "";
+    }
+
+    function resetMap() {
+      state.mapLoaded = false;
+      locationCard.classList.remove("map-loaded");
+      fields.mapViewport.replaceChildren();
+      const label = document.createElement("span");
+      label.textContent = "按需加载地图";
+      fields.mapViewport.append(label);
+    }
+
+    function renderMap(data = state.data) {
+      const network = data?.network || {};
+      const loc = network.location || {};
+      const risk = data?.risk || {};
+      const latitude = loc.latitude ?? risk.latitude;
+      const longitude = loc.longitude ?? risk.longitude;
+      const lat = Number(latitude);
+      const lon = Number(longitude);
+
+      state.mapLoaded = true;
+      fields.mapViewport.replaceChildren();
+
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+        const label = document.createElement("span");
+        label.textContent = "暂无经纬度";
+        fields.mapViewport.append(label);
+        return;
+      }
+
+      const url = new URL("https://www.openstreetmap.org/export/embed.html");
+      const spread = 0.08;
+      url.searchParams.set("bbox", [lon - spread, lat - spread, lon + spread, lat + spread].join(","));
+      url.searchParams.set("layer", "mapnik");
+      url.searchParams.set("marker", [lat, lon].join(","));
+
+      const iframe = document.createElement("iframe");
+      iframe.title = "IP 位置地图";
+      iframe.loading = "lazy";
+      iframe.referrerPolicy = "no-referrer";
+      iframe.src = url.href;
+      fields.mapViewport.append(iframe);
+      locationCard.classList.add("map-loaded");
+    }
+
+    function getInitialTarget() {
+      const params = new URLSearchParams(window.location.search);
+      return getPathTarget() || (params.get("ip") || params.get("target") || "").trim();
+    }
+
+    function getPathTarget() {
+      const match = window.location.pathname.match(/^\/ip\/(.+)$/);
+      return match ? decodeURIComponent(match[1]).trim() : "";
+    }
+
+    function getLocationLine(loc, risk) {
+      const country = loc.country || risk.country || risk.countryCode;
+      const region = loc.region || risk.region;
+      const city = loc.city || risk.city;
+      return [country, region, city].filter(Boolean).join(" • ") || "--";
+    }
+
+    function toChineseLocation(loc, risk) {
+      const countryCode = risk.countryCode || loc.country;
+      const country = getChineseCountry(countryCode, risk.country || loc.country);
+      const region = translateRegion(risk.region || loc.region);
+      const city = translateRegion(risk.city || loc.city);
+      return [country, region, city].filter(Boolean).join(" • ") || getLocationLine(loc, risk);
+    }
+
+    function getChineseCountry(code, fallback) {
+      if (code && /^[A-Z]{2}$/i.test(code) && typeof Intl !== "undefined" && Intl.DisplayNames) {
+        try {
+          return new Intl.DisplayNames(["zh-CN"], { type: "region" }).of(code.toUpperCase()) || fallback;
+        } catch (error) {
+          return fallback;
+        }
+      }
+      const map = { Japan: "日本", China: "中国", "United States": "美国", Singapore: "新加坡", Germany: "德国" };
+      return map[fallback] || fallback;
+    }
+
+    function translateRegion(value) {
+      const map = { Asia: "亚洲", Tokyo: "东京", Japan: "日本", "Shinagawa (Futaba)": "品川 Futaba" };
+      return map[value] || value;
+    }
+
+    function getCountryLine(loc, risk) {
+      const country = risk.country || loc.country;
+      const code = risk.countryCode || loc.country;
+      const continent = risk.continent;
+      return [country, code && code !== country ? code : "", continent].filter(Boolean).join(" • ") || "--";
+    }
+
+    function getCoordsLine(loc, risk) {
+      const latitude = loc.latitude ?? risk.latitude;
+      const longitude = loc.longitude ?? risk.longitude;
+      return latitude && longitude ? latitude + ", " + longitude : "--";
+    }
+
+    function getDetectionLine(risk) {
+      return ["proxy", "vpn", "tor", "hosting", "scraper", "compromised"]
+        .filter((name) => risk[name])
+        .map((name) => ({ proxy: "Proxy", vpn: "VPN", tor: "Tor", hosting: "Hosting", scraper: "Scraper", compromised: "Compromised" }[name]))
+        .join(" / ");
+    }
+
+    function updateFlagPills(risk) {
+      for (const [name, node] of Object.entries(flagPills)) {
+        const active = Boolean(risk[name]);
+        node.classList.toggle("active", active);
+      }
+    }
+
+    function updateJumpLinks(ip) {
+      if (!ip) return;
+      jumpLinks.ping0.href = "https://ping0.cc/ip/" + encodeURIComponent(ip);
+      jumpLinks.ippure.href = "https://ippure.com/?ip=" + encodeURIComponent(ip);
     }
 
     function translateRiskLevel(level) {
@@ -1236,19 +1485,20 @@ function renderHomePage() {
       const action = event.target.closest("[data-action]")?.dataset.action;
       if (!action) return;
 
+      if (action === "refresh") load(state.currentTarget || "");
+      if (action === "refresh-location") load(state.currentTarget || "").then((data) => renderMap(data || state.data));
       if (action === "edit-target") showEdit(true);
       if (action === "cancel-edit") showEdit(false);
       if (action === "copy-ip" && state.data) copyText(state.data.network.ip, "IP已复制");
-      if (action === "copy-json" && state.data) copyText(JSON.stringify(state.data, null, 2), "JSON已复制");
+      if (action === "export-image" && state.data) downloadReportImage();
       if (action === "copy-report" && state.data) {
-        const data = state.data;
         copyText([
-          "IP: " + data.network.ip,
+          "Endpoint: " + state.lastEndpoint,
+          "IP: " + state.data.network.ip,
           "Location: " + fields.location.textContent,
           "ASN: " + fields.asn.textContent,
           "Risk: " + fields.riskScore.textContent,
-          "Shared: " + fields.shared.textContent,
-        ].join("\\n"), "报告已复制");
+        ].join("\n"), "报告已复制");
       }
     });
 
@@ -1257,11 +1507,101 @@ function renderHomePage() {
       const target = targetInput.value.trim();
       if (!target) return;
       showEdit(false);
+      resetMap();
+      window.history.pushState(null, "", "/ip/" + encodeURIComponent(target));
       load(target);
     });
 
-    load();
+    resetMap();
+    load(getInitialTarget());
+
+    function downloadReportImage() {
+      const width = 1200;
+      const height = 720;
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#0b1115";
+      ctx.fillRect(0, 0, width, height);
+      ctx.strokeStyle = "rgba(210,235,231,.14)";
+      ctx.lineWidth = 1;
+      for (let x = 0; x < width; x += 36) line(ctx, x, 0, x, height);
+      for (let y = 0; y < height; y += 36) line(ctx, 0, y, width, y);
+      drawPanel(ctx, 34, 34, 1132, 652);
+      text(ctx, "IP 检测报告", 72, 92, 32, "#eef7f6", "700");
+      text(ctx, state.data.network.ip || "--", 72, 158, 54, "#eef7f6", "700", "monospace");
+      text(ctx, "风险分", 820, 114, 18, "#8ea1a8");
+      text(ctx, fields.riskScore.textContent, 820, 178, 64, "#e7c766", "800");
+      drawMeter(ctx, 820, 210, 250, 16, Number(fields.riskScore.textContent) || 0);
+      const rows = [
+        ["位置", fields.location.textContent],
+        ["ASN", fields.asn.textContent],
+        ["类型", fields.netType.textContent],
+        ["检测", getDetectionLine(state.data.risk || {}) || "无命中"],
+      ];
+      rows.forEach(([label, value], index) => {
+        const y = 268 + index * 54;
+        text(ctx, label, 72, y, 18, "#8ea1a8");
+        text(ctx, value || "--", 190, y, 22, "#eef7f6", "600");
+      });
+      text(ctx, "Generated " + new Date().toISOString(), 72, 642, 15, "#8ea1a8");
+      const link = document.createElement("a");
+      link.download = "ip-report-" + (state.data.network.ip || "target").replace(/[^a-z0-9.-]/gi, "_") + ".png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+
+    function drawPanel(ctx, x, y, width, height) {
+      ctx.fillStyle = "#111b22";
+      ctx.strokeStyle = "rgba(210,235,231,.2)";
+      ctx.beginPath();
+      ctx.roundRect(x, y, width, height, 14);
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    function drawMeter(ctx, x, y, width, height, score) {
+      const gradient = ctx.createLinearGradient(x, y, x + width, y);
+      gradient.addColorStop(0, "#74d384");
+      gradient.addColorStop(.55, "#e7c766");
+      gradient.addColorStop(1, "#e46f5c");
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.roundRect(x, y, width, height, 999);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(x + Math.max(0, Math.min(100, score)) / 100 * width - 2, y - 4, 4, height + 8);
+    }
+
+    function line(ctx, x1, y1, x2, y2) {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+
+    function text(ctx, value, x, y, size, color, weight = "400", family = "Aptos, Segoe UI, sans-serif") {
+      ctx.fillStyle = color;
+      ctx.font = weight + " " + size + "px " + family;
+      ctx.fillText(String(value || "--"), x, y);
+    }
   </script>
 </body>
-</html>`;
+</html>
+`;
+
+function renderHomePage() {
+  return HOME_HTML;
+}
+
+function normalizeDetectionHistory(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  return {
+    delisted: booleanish(value.delisted),
+    delistDatetime: value.delist_datetime || value.delistDatetime || null,
+  };
 }

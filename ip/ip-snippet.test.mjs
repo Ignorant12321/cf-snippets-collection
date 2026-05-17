@@ -47,6 +47,63 @@ const SAMPLE_PROXYCHECK = {
   },
 };
 
+const SAMPLE_PROXYCHECK_V3 = {
+  status: "ok",
+  "109.166.36.159": {
+    network: {
+      asn: "AS212238",
+      range: "109.166.36.0/24",
+      hostname: null,
+      provider: "Datacamp Limited",
+      organisation: "Digital Virtualisation Solutions Tokyo",
+      type: "Hosting",
+    },
+    location: {
+      continent_name: "Asia",
+      continent_code: "AS",
+      country_name: "Japan",
+      country_code: "JP",
+      region_name: "Tokyo",
+      region_code: "13",
+      city_name: "Shinagawa (Futaba)",
+      postal_code: "142-0043",
+      latitude: 35.6066,
+      longitude: 139.726,
+      timezone: "Asia/Tokyo",
+      currency: {
+        name: "Yen",
+        code: "JPY",
+        symbol: "¥",
+      },
+    },
+    device_estimate: {
+      address: 1,
+      subnet: 32,
+    },
+    detections: {
+      proxy: false,
+      vpn: false,
+      compromised: false,
+      scraper: false,
+      tor: false,
+      hosting: true,
+      anonymous: false,
+      risk: 33,
+      confidence: 100,
+      first_seen: null,
+      last_seen: null,
+    },
+    detection_history: {
+      delisted: true,
+      delist_datetime: "2026-03-26T05:11:23Z",
+    },
+    attack_history: null,
+    operator: null,
+    last_updated: "2026-05-07T04:01:44Z",
+  },
+  query_time: 4,
+};
+
 test("buildProxycheckUrl uses free no-key mode when env key is absent", () => {
   const url = buildProxycheckUrl("203.0.113.8", {});
 
@@ -56,7 +113,30 @@ test("buildProxycheckUrl uses free no-key mode when env key is absent", () => {
   assert.equal(url.searchParams.get("vpn"), "3");
   assert.equal(url.searchParams.get("asn"), "1");
   assert.equal(url.searchParams.get("node"), "1");
+  assert.equal(url.searchParams.has("ver"), false);
   assert.equal(url.searchParams.has("key"), false);
+});
+
+test("buildProxycheckUrl can use snippet-local API keys without rendering them to HTML", async () => {
+  const secret = "snippet-local-secret";
+  const url = buildProxycheckUrl("203.0.113.8", {}, {
+    proxycheckEndpoint: "https://proxycheck.io/v3/",
+    proxycheckApiKeys: [secret],
+  });
+  const response = await handleRequest(new Request("https://ip.example/"));
+  const html = await response.text();
+
+  assert.equal(url.searchParams.get("key"), secret);
+  assert.equal(html.includes(secret), false);
+});
+
+test("buildProxycheckUrl rotates through multiple server-side API keys", () => {
+  const env = { PROXYCHECK_API_KEYS: "key-alpha, key-beta\nkey-gamma" };
+
+  assert.equal(buildProxycheckUrl("203.0.113.8", env).searchParams.get("key"), "key-alpha");
+  assert.equal(buildProxycheckUrl("203.0.113.8", env).searchParams.get("key"), "key-beta");
+  assert.equal(buildProxycheckUrl("203.0.113.8", env).searchParams.get("key"), "key-gamma");
+  assert.equal(buildProxycheckUrl("203.0.113.8", env).searchParams.get("key"), "key-alpha");
 });
 
 test("normalizeRiskIntel extracts risk score and shared device estimate", () => {
@@ -69,6 +149,30 @@ test("normalizeRiskIntel extracts risk score and shared device estimate", () => 
   assert.equal(intel.type, "VPN");
   assert.equal(intel.sharedEstimate, "1000+");
   assert.equal(intel.provider, "Example Transit");
+});
+
+test("normalizeRiskIntel extracts useful proxycheck v3 fields", () => {
+  const intel = normalizeRiskIntel(SAMPLE_PROXYCHECK_V3, "109.166.36.159");
+
+  assert.equal(intel.riskScore, 33);
+  assert.equal(intel.confidence, 100);
+  assert.equal(intel.hosting, true);
+  assert.equal(intel.proxy, false);
+  assert.equal(intel.vpn, false);
+  assert.equal(intel.tor, false);
+  assert.equal(intel.compromised, false);
+  assert.equal(intel.scraper, false);
+  assert.equal(intel.type, "Hosting");
+  assert.equal(intel.country, "Japan");
+  assert.equal(intel.countryCode, "JP");
+  assert.equal(intel.city, "Shinagawa (Futaba)");
+  assert.equal(intel.region, "Tokyo");
+  assert.equal(intel.continent, "Asia");
+  assert.equal(intel.currencyCode, "JPY");
+  assert.equal(intel.sharedEstimate, "地址 1 / 子网 32");
+  assert.equal(intel.detectionHistory.delisted, true);
+  assert.equal(intel.detectionHistory.delistDatetime, "2026-03-26T05:11:23Z");
+  assert.equal(intel.lastUpdated, "2026-05-07T04:01:44Z");
 });
 
 test("api/me combines Cloudflare request data with proxycheck risk data", async () => {
@@ -105,6 +209,30 @@ test("api/me combines Cloudflare request data with proxycheck risk data", async 
   assert.equal(body.risk.sharedEstimate, "1000+");
 });
 
+test("api/me never exposes server-side proxycheck keys in response body", async () => {
+  const request = attachCf(
+    new Request("https://ip.example/api/me", {
+      headers: {
+        "CF-Connecting-IP": "203.0.113.8",
+        "CF-Ray": "9fcb4dc95daeebf9-NRT",
+      },
+    }),
+    SAMPLE_CF,
+  );
+  const secret = "server-only-secret";
+
+  const response = await handleRequest(request, { PROXYCHECK_API_KEYS: secret }, {}, {
+    fetch: async (url) => {
+      assert.equal(new URL(url).searchParams.get("key"), secret);
+      return Response.json(SAMPLE_PROXYCHECK);
+    },
+  });
+  const bodyText = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.equal(bodyText.includes(secret), false);
+});
+
 test("api/lookup rejects unsafe targets", async () => {
   const request = new Request("https://ip.example/api/lookup?target=https://example.com/path");
   const response = await handleRequest(request, {}, {}, {
@@ -119,6 +247,15 @@ test("api/lookup rejects unsafe targets", async () => {
   assert.equal(body.error, "Invalid target");
 });
 
+test("path query route serves the dashboard and seeds initial target", async () => {
+  const response = await handleRequest(new Request("https://ip.example/ip/109.166.36.159"));
+  const html = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.match(html, /getPathTarget/);
+  assert.match(html, /\^\\\/ip\\\/\(\.\+\)\$/);
+});
+
 test("home page includes pencil edit control and dashboard shell", async () => {
   const response = await handleRequest(new Request("https://ip.example/"));
   const html = await response.text();
@@ -127,15 +264,69 @@ test("home page includes pencil edit control and dashboard shell", async () => {
   assert.match(html, /IP 检测/);
   assert.match(html, /aria-label="修改查询目标"/);
   assert.match(html, /data-role="risk-meter"/);
+  assert.match(html, /rel="icon"/);
+  assert.match(html, /data-action="export-image"/);
+  assert.match(html, /downloadReportImage/);
+  assert.doesNotMatch(html, /data-field="riskSummary"/);
+  assert.match(html, /class="risk-value"/);
+  assert.match(html, /location-card/);
+  assert.match(html, /location-head/);
+  assert.match(html, /data-action="refresh-location"/);
+  assert.match(html, /aria-label="刷新定位"/);
+  assert.match(html, /data-field="mapViewport"/);
+  assert.match(html, /按需加载地图/);
+  assert.match(html, /\.map-box\s*{[\s\S]*?inset:\s*88px 14px 14px/);
+  assert.match(html, /\.side-stack\s*{[\s\S]*?align-content:\s*start/);
+  assert.match(html, /\.side-compact\s*{[\s\S]*?align-items:\s*start/);
+  assert.match(html, /renderMap/);
+  assert.match(html, /openstreetmap\.org\/export\/embed/);
+  assert.doesNotMatch(html, /<iframe[^>]+openstreetmap/i);
+  assert.match(html, /class="side-compact"/);
+  assert.match(html, /\.side-compact \.stat\s*{[\s\S]*?min-height:\s*58px/);
+  assert.doesNotMatch(html, /data-field="cfNode"/);
+  assert.doesNotMatch(html, /mini-grid/);
+  assert.doesNotMatch(html, /设备估计/);
+  assert.doesNotMatch(html, /查询语言/);
+  assert.doesNotMatch(html, /pill\.good/);
+  assert.match(html, /data-flag="proxy"/);
+  assert.match(html, /data-flag="vpn"/);
+  assert.match(html, /data-flag="tor"/);
+  assert.match(html, /data-flag="hosting"/);
+  assert.match(html, /new URLSearchParams\(window\.location\.search\)/);
+  assert.match(html, /getInitialTarget/);
+  assert.match(html, /data-field="jumpLinks"/);
+  assert.match(html, /\.jump-grid\s*{[\s\S]*?margin-top:\s*10px/);
+  assert.match(html, /ping0\.cc\/ip\//);
+  assert.match(html, /ippure\.com\/\?ip=/);
+  assert.match(html, /toChineseLocation/);
 });
 
-test("local ip.html can test a configurable Worker API", async () => {
+test("snippet home page stays synchronized with local ip.html", async () => {
+  const response = await handleRequest(new Request("https://ip.example/"));
+  const snippetHtml = await response.text();
   const html = await readFile(new URL("./ip.html", import.meta.url), "utf8");
 
-  assert.match(html, /IP 本地测试台/);
-  assert.match(html, /id="apiBase"/);
-  assert.match(html, /http:\/\/127\.0\.0\.1:8787/);
+  assert.equal(snippetHtml, html);
+});
+
+test("unified UI does not include local-only API base form", async () => {
+  const html = await readFile(new URL("./ip.html", import.meta.url), "utf8");
+
+  assert.doesNotMatch(html, /id="devForm"/);
+  assert.doesNotMatch(html, /id="apiBase"/);
+  assert.doesNotMatch(html, /127\.0\.0\.1:8787/);
   assert.match(html, /\/api\/me/);
-  assert.match(html, /\/api\/lookup\?target=/);
+  assert.match(html, /\/ip\/"\s*\+/);
   assert.match(html, /aria-label="修改查询目标"/);
+});
+
+test("unified UI removes expandable raw JSON panel to avoid layout jump", async () => {
+  const html = await readFile(new URL("./ip.html", import.meta.url), "utf8");
+
+  assert.doesNotMatch(html, /<details\b/);
+  assert.doesNotMatch(html, /<summary\b/);
+  assert.doesNotMatch(html, /原始 JSON/);
+  assert.doesNotMatch(html, /data-field="json"/);
+  assert.doesNotMatch(html, /data-action="copy-json"/);
+  assert.doesNotMatch(html, />JSON</);
 });
