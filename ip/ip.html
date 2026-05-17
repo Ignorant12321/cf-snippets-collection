@@ -1,0 +1,727 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IP 本地测试台</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #eef8ff;
+      --muted: #9fb0c3;
+      --line: rgba(218, 237, 255, 0.14);
+      --panel: rgba(25, 36, 54, 0.82);
+      --cyan: #7df0e1;
+      --mint: #7be495;
+      --gold: #ffd166;
+      --coral: #ff6f61;
+      --violet: #9d8cff;
+      --shadow: rgba(0, 0, 0, 0.38);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: ui-rounded, "Aptos", "Segoe UI", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% 12%, rgba(125, 240, 225, 0.18), transparent 30rem),
+        radial-gradient(circle at 86% 16%, rgba(157, 140, 255, 0.16), transparent 31rem),
+        linear-gradient(135deg, #07131a 0%, #161824 46%, #231f35 100%);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,.6), transparent 82%);
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .shell {
+      width: min(1480px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 30px 0 36px;
+      position: relative;
+    }
+
+    .devbar,
+    .hero,
+    .side,
+    .panel {
+      border: 1px solid var(--line);
+      background: linear-gradient(142deg, rgba(29, 48, 61, 0.9), rgba(27, 31, 48, 0.84) 50%, rgba(54, 48, 77, 0.78));
+      box-shadow: 0 20px 70px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.05);
+      backdrop-filter: blur(18px);
+    }
+
+    .devbar {
+      display: grid;
+      grid-template-columns: auto minmax(260px, 1fr) auto auto;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 22px;
+      padding: 14px;
+      border-radius: 24px 24px 8px 24px;
+    }
+
+    .devbar strong {
+      padding: 0 8px;
+      font-size: 17px;
+      white-space: nowrap;
+    }
+
+    .field {
+      min-height: 44px;
+      min-width: 0;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 999px;
+      padding: 0 16px;
+      color: var(--ink);
+      background: rgba(0,0,0,.2);
+      outline: none;
+    }
+
+    .field:focus {
+      border-color: rgba(125,240,225,.55);
+      box-shadow: 0 0 0 4px rgba(125,240,225,.08);
+    }
+
+    .top-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.8fr);
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    .hero {
+      min-height: 470px;
+      border-radius: 30px 30px 8px 30px;
+      padding: 36px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -8% -38% 38%;
+      height: 56%;
+      background: linear-gradient(110deg, rgba(125,240,225,.22), rgba(255,111,97,.1), rgba(157,140,255,.2));
+      transform: rotate(-8deg);
+      filter: blur(18px);
+      pointer-events: none;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    .badge {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: var(--cyan);
+      color: #06252b;
+      font-weight: 900;
+      box-shadow: 0 0 38px rgba(125, 240, 225, .35);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .chip,
+    .icon-button {
+      min-height: 44px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 999px;
+      color: var(--ink);
+      background: rgba(255,255,255,.07);
+      cursor: pointer;
+      transition: transform .18s ease, border-color .18s ease, background .18s ease;
+    }
+
+    .chip {
+      padding: 0 17px;
+    }
+
+    .chip:hover,
+    .icon-button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(125,240,225,.45);
+      background: rgba(125,240,225,.12);
+    }
+
+    h1 {
+      margin: 58px 0 12px;
+      font-size: clamp(54px, 7vw, 96px);
+      line-height: .95;
+      letter-spacing: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .subtitle {
+      margin: 0;
+      max-width: 800px;
+      color: var(--muted);
+      font-size: clamp(17px, 2vw, 22px);
+      line-height: 1.6;
+      position: relative;
+      z-index: 1;
+    }
+
+    .ip-card {
+      margin-top: 36px;
+      border: 1px solid rgba(218,237,255,.16);
+      border-radius: 26px 26px 8px 26px;
+      padding: 26px;
+      background: linear-gradient(115deg, rgba(94, 150, 158, .36), rgba(74, 68, 110, .55));
+      position: relative;
+      z-index: 1;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 15px;
+      margin-bottom: 12px;
+    }
+
+    .ip-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .ip-value {
+      margin: 0;
+      font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+      font-size: clamp(34px, 5.4vw, 66px);
+      line-height: 1;
+      word-break: break-word;
+    }
+
+    .edit-form {
+      display: none;
+      width: min(100%, 760px);
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .edit-form.active {
+      display: flex;
+    }
+
+    .edit-form input {
+      flex: 1 1 300px;
+      min-height: 58px;
+      min-width: 0;
+      border-radius: 18px;
+    }
+
+    .icon-button {
+      width: 44px;
+      height: 44px;
+      display: inline-grid;
+      place-items: center;
+      padding: 0;
+    }
+
+    .edit-button {
+      opacity: .62;
+    }
+
+    .pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .pill {
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 999px;
+      padding: 9px 13px;
+      color: var(--muted);
+      background: rgba(255,255,255,.05);
+      min-width: 58px;
+      text-align: center;
+    }
+
+    .side {
+      border-radius: 30px 30px 30px 8px;
+      padding: 28px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .stat {
+      min-height: 144px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 24px 24px 8px 24px;
+      padding: 22px;
+      background: rgba(255,255,255,.055);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 8px;
+      font-size: clamp(21px, 2.2vw, 28px);
+      line-height: 1.22;
+      word-break: break-word;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(300px, .72fr) minmax(0, 1fr);
+      gap: 22px;
+      margin-top: 22px;
+    }
+
+    .panel {
+      border-radius: 28px 28px 8px 28px;
+      padding: 28px;
+      min-width: 0;
+    }
+
+    h2 {
+      margin: 0 0 22px;
+      font-size: 27px;
+      letter-spacing: 0;
+    }
+
+    .rows {
+      display: grid;
+      gap: 0;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: minmax(116px, .42fr) minmax(0, 1fr);
+      gap: 18px;
+      padding: 17px 0;
+      border-bottom: 1px solid rgba(255,255,255,.09);
+      align-items: center;
+    }
+
+    .row span:first-child {
+      color: var(--muted);
+    }
+
+    .row strong,
+    .row code {
+      color: var(--ink);
+      font-size: 17px;
+      word-break: break-word;
+    }
+
+    .risk-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .risk-score {
+      font-size: clamp(44px, 5vw, 76px);
+      line-height: 1;
+      font-weight: 900;
+      color: var(--gold);
+    }
+
+    .risk-meter {
+      height: 18px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: linear-gradient(90deg, var(--mint), var(--gold), var(--coral));
+      border: 1px solid rgba(255,255,255,.12);
+      position: relative;
+    }
+
+    .risk-pin {
+      position: absolute;
+      top: -6px;
+      width: 4px;
+      height: 30px;
+      border-radius: 4px;
+      background: #fff;
+      box-shadow: 0 0 18px rgba(255,255,255,.7);
+      left: 0;
+      transform: translateX(-2px);
+    }
+
+    .risk-cards {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .mini {
+      min-height: 96px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 16px 16px 6px 16px;
+      padding: 15px;
+      background: rgba(255,255,255,.045);
+    }
+
+    .mini b {
+      display: block;
+      margin-top: 8px;
+      font-size: 20px;
+      word-break: break-word;
+    }
+
+    .json-box {
+      max-height: 300px;
+      overflow: auto;
+      margin: 22px 0 0;
+      padding: 18px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.1);
+      background: rgba(0,0,0,.24);
+      color: #d6f7ff;
+      font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    .loading {
+      opacity: .72;
+    }
+
+    .error {
+      color: #ffb3aa;
+    }
+
+    @media (max-width: 980px) {
+      .devbar,
+      .top-grid,
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero,
+      .side,
+      .panel,
+      .devbar {
+        border-radius: 24px 24px 8px 24px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .shell {
+        width: min(100% - 24px, 1480px);
+        padding-top: 14px;
+      }
+
+      .hero,
+      .side,
+      .panel {
+        padding: 20px;
+      }
+
+      .nav {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .actions {
+        justify-content: flex-start;
+      }
+
+      .risk-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <form class="devbar" id="devForm">
+      <strong>IP 本地测试台</strong>
+      <input class="field" id="apiBase" name="apiBase" value="http://127.0.0.1:8787" aria-label="Worker API 地址">
+      <button class="chip" type="submit">刷新当前IP</button>
+      <button class="chip" type="button" data-action="use-current-origin">当前Origin</button>
+    </form>
+
+    <section class="top-grid">
+      <div class="hero">
+        <div class="nav">
+          <div class="brand">
+            <span class="badge">IP</span>
+            <span>CF Snippets Network Check</span>
+          </div>
+          <div class="actions">
+            <button class="chip" type="button" data-action="copy-ip">复制IP</button>
+            <button class="chip" type="button" data-action="copy-json">JSON</button>
+            <button class="chip" type="button" data-action="copy-report">Report</button>
+          </div>
+        </div>
+
+        <div>
+          <h1>IP 检测</h1>
+          <p class="subtitle">连接本地或线上 Worker，测试 /api/me 与 /api/lookup 的 UI 展示、风控值和共享人数。</p>
+
+          <section class="ip-card">
+            <div class="label">查询目标</div>
+            <div class="ip-row" id="ipDisplay">
+              <p class="ip-value loading" data-field="ip">等待连接</p>
+              <button class="icon-button edit-button" type="button" data-action="edit-target" aria-label="修改查询目标" title="修改查询目标">✎</button>
+            </div>
+            <form class="edit-form" id="editForm">
+              <input class="field" id="targetInput" name="target" autocomplete="off" placeholder="输入 IP 或域名">
+              <button class="chip" type="submit">查询</button>
+              <button class="icon-button" type="button" data-action="cancel-edit" aria-label="取消">x</button>
+            </form>
+            <div class="pills">
+              <span class="pill" data-field="ipVersion">--</span>
+              <span class="pill" data-field="country">--</span>
+              <span class="pill" data-field="colo">Colo --</span>
+              <span class="pill" data-field="http">HTTP --</span>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <aside class="side">
+        <div class="stat">
+          <span class="label">网络位置</span>
+          <strong data-field="location">--</strong>
+        </div>
+        <div class="stat">
+          <span class="label">ASN/运营商</span>
+          <strong data-field="asn">--</strong>
+        </div>
+        <div class="stat">
+          <span class="label">Cloudflare节点</span>
+          <strong data-field="cfNode">--</strong>
+        </div>
+      </aside>
+    </section>
+
+    <section class="content-grid">
+      <section class="panel">
+        <h2>网络信息</h2>
+        <div class="rows">
+          <div class="row"><span>IP类型</span><strong data-field="netType">--</strong></div>
+          <div class="row"><span>国家/地区</span><strong data-field="countryFull">--</strong></div>
+          <div class="row"><span>时区</span><strong data-field="timezone">--</strong></div>
+          <div class="row"><span>经纬度</span><strong data-field="coords">--</strong></div>
+          <div class="row"><span>请求语言</span><strong data-field="language">--</strong></div>
+          <div class="row"><span>接口地址</span><code data-field="endpoint">--</code></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="risk-head">
+          <div>
+            <h2>风控情报</h2>
+            <div class="label" data-field="riskSource">proxycheck.io</div>
+          </div>
+          <div class="risk-score" data-field="riskScore">--</div>
+        </div>
+        <div class="risk-meter" data-role="risk-meter">
+          <span class="risk-pin" data-field="riskPin"></span>
+        </div>
+        <div class="risk-cards">
+          <div class="mini"><span class="label">风险等级</span><b data-field="riskLevel">--</b></div>
+          <div class="mini"><span class="label">共享人数</span><b data-field="shared">--</b></div>
+          <div class="mini"><span class="label">匿名网络</span><b data-field="anonymous">--</b></div>
+          <div class="mini"><span class="label">网络类型</span><b data-field="riskType">--</b></div>
+        </div>
+        <pre class="json-box" data-field="json">{}</pre>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const state = { data: null, currentTarget: "", lastEndpoint: "" };
+    const fields = Object.fromEntries([...document.querySelectorAll("[data-field]")].map((node) => [node.dataset.field, node]));
+    const devForm = document.getElementById("devForm");
+    const apiBaseInput = document.getElementById("apiBase");
+    const editForm = document.getElementById("editForm");
+    const ipDisplay = document.getElementById("ipDisplay");
+    const targetInput = document.getElementById("targetInput");
+
+    const fmt = (value, fallback = "--") => value === null || value === undefined || value === "" ? fallback : value;
+    const yesNo = (value) => value ? "是" : "否";
+
+    function getApiBase() {
+      const value = apiBaseInput.value.trim().replace(/\/+$/, "");
+      return value || window.location.origin;
+    }
+
+    async function load(target = "") {
+      setLoading();
+      const base = getApiBase();
+      const endpoint = target ? base + "/api/lookup?target=" + encodeURIComponent(target) : base + "/api/me";
+      state.lastEndpoint = endpoint;
+      fields.endpoint.textContent = endpoint;
+
+      try {
+        const response = await fetch(endpoint, { headers: { accept: "application/json" } });
+        const data = await response.json();
+        if (!response.ok || !data.ok) throw new Error(data.message || data.error || "查询失败");
+        state.data = data;
+        state.currentTarget = data.query.target;
+        render(data);
+      } catch (error) {
+        fields.ip.textContent = "连接失败";
+        fields.ip.classList.add("error");
+        fields.riskSource.textContent = "请检查 Worker 是否运行，或 API Base 是否允许 CORS";
+        fields.json.textContent = JSON.stringify({ endpoint, error: error.message }, null, 2);
+      }
+    }
+
+    function setLoading() {
+      fields.ip.textContent = "检测中";
+      fields.ip.classList.add("loading");
+      fields.ip.classList.remove("error");
+      fields.riskScore.textContent = "--";
+      fields.riskPin.style.left = "0%";
+      fields.json.textContent = "{}";
+    }
+
+    function render(data) {
+      const network = data.network || {};
+      const loc = network.location || {};
+      const asn = network.asn || {};
+      const cf = data.cloudflare || {};
+      const risk = data.risk || {};
+      const cityLine = [loc.country, loc.region, loc.city].filter(Boolean).join(" • ");
+      const asnLine = [asn.number ? "AS" + asn.number : risk.asn, asn.organization || risk.provider || risk.organisation].filter(Boolean).join(" • ");
+      const score = Number.isFinite(risk.riskScore) ? risk.riskScore : null;
+
+      fields.ip.classList.remove("loading", "error");
+      fields.ip.textContent = network.ip || data.query.lookupIp || "--";
+      fields.ipVersion.textContent = network.version || "--";
+      fields.country.textContent = loc.country || risk.country || "--";
+      fields.colo.textContent = "Colo " + fmt(cf.colo);
+      fields.http.textContent = fmt(cf.httpProtocol, "HTTP --");
+      fields.location.textContent = cityLine || "--";
+      fields.asn.textContent = asnLine || "--";
+      fields.cfNode.textContent = [cf.colo, cf.ray].filter(Boolean).join(" • ") || "--";
+      fields.netType.textContent = risk.type || network.version || "--";
+      fields.countryFull.textContent = cityLine || risk.country || "--";
+      fields.timezone.textContent = loc.timezone || "--";
+      fields.coords.textContent = loc.latitude && loc.longitude ? loc.latitude + ", " + loc.longitude : "--";
+      fields.language.textContent = data.request?.acceptLanguage || "--";
+      fields.riskScore.textContent = score === null ? "--" : String(score);
+      fields.riskPin.style.left = (score === null ? 0 : score) + "%";
+      fields.riskLevel.textContent = translateRiskLevel(risk.riskLevel);
+      fields.shared.textContent = risk.sharedEstimate || "未知";
+      fields.anonymous.textContent = yesNo(risk.anonymous || risk.proxy || risk.vpn || risk.tor);
+      fields.riskType.textContent = risk.type || (risk.hosting ? "Hosting" : "--");
+      fields.riskSource.textContent = risk.status === "error" ? risk.message : "proxycheck.io";
+      fields.json.textContent = JSON.stringify(data, null, 2);
+      targetInput.value = state.currentTarget || "";
+    }
+
+    function translateRiskLevel(level) {
+      return { low: "低", medium: "中", high: "高", critical: "极高", unknown: "未知" }[level] || "--";
+    }
+
+    function showEdit(show) {
+      editForm.classList.toggle("active", show);
+      ipDisplay.style.display = show ? "none" : "flex";
+      if (show) targetInput.focus();
+    }
+
+    async function copyText(text, label = "已复制") {
+      await navigator.clipboard.writeText(text);
+      const button = document.querySelector("[data-action='copy-ip']");
+      const old = button.textContent;
+      button.textContent = label;
+      setTimeout(() => button.textContent = old, 1100);
+    }
+
+    document.addEventListener("click", (event) => {
+      const action = event.target.closest("[data-action]")?.dataset.action;
+      if (!action) return;
+
+      if (action === "edit-target") showEdit(true);
+      if (action === "cancel-edit") showEdit(false);
+      if (action === "use-current-origin") {
+        apiBaseInput.value = window.location.origin;
+        load();
+      }
+      if (action === "copy-ip" && state.data) copyText(state.data.network.ip, "IP已复制");
+      if (action === "copy-json" && state.data) copyText(JSON.stringify(state.data, null, 2), "JSON已复制");
+      if (action === "copy-report" && state.data) {
+        copyText([
+          "Endpoint: " + state.lastEndpoint,
+          "IP: " + state.data.network.ip,
+          "Location: " + fields.location.textContent,
+          "ASN: " + fields.asn.textContent,
+          "Risk: " + fields.riskScore.textContent,
+          "Shared: " + fields.shared.textContent,
+        ].join("\\n"), "报告已复制");
+      }
+    });
+
+    devForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      load();
+    });
+
+    editForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const target = targetInput.value.trim();
+      if (!target) return;
+      showEdit(false);
+      load(target);
+    });
+
+    load();
+  </script>
+</body>
+</html>
