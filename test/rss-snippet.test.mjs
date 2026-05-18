@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 
-const snippetUrl = new URL('./rss-snippet.js', import.meta.url);
+const snippetUrl = new URL('../rss/rss-snippet.js', import.meta.url);
 
 async function loadSnippet() {
   const source = await readFile(snippetUrl, 'utf8');
@@ -40,7 +40,7 @@ test('/rss with valid source proxies upstream XML', async () => {
   const originalFetch = globalThis.fetch;
 
   globalThis.fetch = async (url, init) => {
-    assert.equal(url, 'https://rsshub.pseudoyu.com/zaobao/realtime/china');
+    assert.equal(url, 'https://rsshub.rssforever.com"/zaobao/realtime/china');
     assert.equal(init.method, 'GET');
 
     return new Response('<rss version="2.0"></rss>', {

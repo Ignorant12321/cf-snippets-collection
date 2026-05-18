@@ -9,8 +9,8 @@
 | `ip-snippet.js` | 可读源码，包含 Snippet 后端逻辑和内嵌页面。 |
 | `ip-snippet.min.js` | 压缩后用于部署到 Cloudflare Snippets 的版本，需小于 32KB。 |
 | `ip.html` | 页面 UI 的可读源文件，修改界面时优先改它。 |
-| `minify-snippet.mjs` | 将 `ip.html` 同步压缩进 `ip-snippet.js` 并生成 `ip-snippet.min.js`。 |
-| `ip-snippet.test.mjs` | Node 测试，覆盖 API、风控解析、HTML 同步和密钥不泄露。 |
+| `../minify-snippet.mjs` | 根目录通用压缩脚本，将 `ip.html` 同步压缩进 `ip-snippet.js` 并生成 `ip-snippet.min.js`。 |
+| `../test/ip-snippet.test.mjs` | Node 测试，覆盖 API、风控解析、HTML 同步和密钥不泄露。 |
 
 ## 功能
 
@@ -150,7 +150,7 @@ https://ip.example.com/api/lookup?target=109.166.36.159
 Cloudflare Snippets 有 32KB 大小限制。不要直接部署可读版 `ip-snippet.js`，请先生成压缩版：
 
 ```bash
-node ip/minify-snippet.mjs
+node minify-snippet.mjs ip
 ```
 
 默认输出：
@@ -170,7 +170,7 @@ Limit:    32,768 bytes
 也可以指定输出文件名：
 
 ```bash
-node ip/minify-snippet.mjs ip-snippet.prod.js
+node minify-snippet.mjs ip ip-snippet.prod.js
 ```
 
 脚本会：
@@ -191,13 +191,13 @@ node ip/minify-snippet.mjs ip-snippet.prod.js
 3. 运行测试：
 
 ```bash
-node --test ip/ip-snippet.test.mjs
+node --test test/ip-snippet.test.mjs
 ```
 
 4. 生成压缩版：
 
 ```bash
-node ip/minify-snippet.mjs
+node minify-snippet.mjs ip
 ```
 
 5. 将 `ip/ip-snippet.min.js` 粘贴到 Cloudflare Snippets。
@@ -230,7 +230,7 @@ node ip/minify-snippet.mjs
 运行测试：
 
 ```bash
-node --test ip/ip-snippet.test.mjs
+node --test test/ip-snippet.test.mjs
 ```
 
 检查语法：
@@ -243,7 +243,7 @@ node --check ip/ip-snippet.min.js
 检查压缩体积：
 
 ```bash
-node ip/minify-snippet.mjs
+node minify-snippet.mjs ip
 ```
 
 ## 注意事项

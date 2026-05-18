@@ -6,7 +6,7 @@ import {
   buildProxycheckUrl,
   handleRequest,
   normalizeRiskIntel,
-} from "./ip-snippet.js";
+} from "../ip/ip-snippet.js";
 
 function attachCf(request, cf) {
   Object.defineProperty(request, "cf", {
@@ -328,13 +328,13 @@ test("home page includes pencil edit control and dashboard shell", async () => {
 test("snippet home page stays synchronized with local ip.html", async () => {
   const response = await handleRequest(new Request("https://ip.example/"));
   const snippetHtml = await response.text();
-  const html = await readFile(new URL("./ip.html", import.meta.url), "utf8");
+  const html = await readFile(new URL("../ip/ip.html", import.meta.url), "utf8");
 
   assert.equal(snippetHtml, html);
 });
 
 test("unified UI does not include local-only API base form", async () => {
-  const html = await readFile(new URL("./ip.html", import.meta.url), "utf8");
+  const html = await readFile(new URL("../ip/ip.html", import.meta.url), "utf8");
 
   assert.doesNotMatch(html, /id="devForm"/);
   assert.doesNotMatch(html, /id="apiBase"/);
@@ -345,7 +345,7 @@ test("unified UI does not include local-only API base form", async () => {
 });
 
 test("unified UI removes expandable raw JSON panel to avoid layout jump", async () => {
-  const html = await readFile(new URL("./ip.html", import.meta.url), "utf8");
+  const html = await readFile(new URL("../ip/ip.html", import.meta.url), "utf8");
 
   assert.doesNotMatch(html, /<details\b/);
   assert.doesNotMatch(html, /<summary\b/);

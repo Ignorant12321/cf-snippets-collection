@@ -8,7 +8,7 @@
 | --- | --- |
 | `iptv-snippet.js` | 部署到 Cloudflare Snippets 的脚本。 |
 | `iptv.html` | 本地预览主页样式用，不直接部署。 |
-| `iptv-snippet.test.mjs` | Node 测试，覆盖路由、筛选、搜索、favicon 和 32KB 限制。 |
+| `../test/iptv-snippet.test.mjs` | Node 测试，覆盖路由、筛选、搜索、favicon 和 32KB 限制。 |
 | `index.m3u` | 本地下载的上游样本，用于检查频道覆盖情况。 |
 
 ## 路由
@@ -289,7 +289,7 @@ http://127.0.0.1:8787/iptv.html
 本地运行：
 
 ```bash
-node --test iptv/iptv-snippet.test.mjs
+node --test test/iptv-snippet.test.mjs
 ```
 
 测试覆盖：

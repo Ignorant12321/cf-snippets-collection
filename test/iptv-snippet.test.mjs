@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 
-const snippetUrl = new URL("./iptv-snippet.js", import.meta.url);
+const snippetUrl = new URL("../iptv/iptv-snippet.js", import.meta.url);
 
 async function loadSnippet() {
   const source = await readFile(snippetUrl, "utf8");
@@ -65,7 +65,7 @@ test("snippet uses compressed homepage HTML and stays within Cloudflare size lim
 });
 
 test("standalone iptv.html can hydrate local preview placeholders", async () => {
-  const html = await readFile(new URL("./iptv.html", import.meta.url), "utf8");
+  const html = await readFile(new URL("../iptv/iptv.html", import.meta.url), "utf8");
 
   assert.match(html, /id="source-template"/);
   assert.match(html, /LOCAL_SOURCES/);

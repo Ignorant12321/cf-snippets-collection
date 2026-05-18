@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 
-const snippetUrl = new URL('./github-snippet.js', import.meta.url);
+const snippetUrl = new URL('../github/github-snippet.js', import.meta.url);
 
 async function loadSnippet() {
   const source = await readFile(snippetUrl, 'utf8');
@@ -31,7 +31,7 @@ test('home page includes a favicon for the GitHub proxy project', async () => {
 });
 
 test('static GitHub project page includes the same favicon', async () => {
-  const html = await readFile(new URL('./github.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../github/github.html', import.meta.url), 'utf8');
 
   assert.match(html, /<link rel="icon"[^>]+type="image\/svg\+xml"/);
   assert.match(html, /viewBox='0 0 32 32'/);

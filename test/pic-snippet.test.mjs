@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 
 async function loadSnippet() {
-  const source = await readFile(new URL('./pic-snippet.js', import.meta.url), 'utf8');
+  const source = await readFile(new URL('../pic/pic-snippet.js', import.meta.url), 'utf8');
   const encoded = Buffer.from(source, 'utf8').toString('base64');
   return import(`data:text/javascript;base64,${encoded}`);
 }
