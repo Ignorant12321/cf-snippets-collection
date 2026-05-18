@@ -51,6 +51,12 @@ test("/ renders an HTML source directory instead of an M3U playlist", async () =
   assert.match(html, /href="\/china"/);
   assert.match(html, /rel="icon"/);
   assert.match(html, /image\/svg\+xml/);
+  assert.match(html, /data-brand-logo="iptv-console"/);
+  assert.match(html, /--logo-svg:/);
+  assert.match(html, /--surface-glass:/);
+  assert.match(html, /data-upstream-source/);
+  assert.match(html, /iptv-org\/iptv/);
+  assert.match(html, /https:\/\/iptv-org\.github\.io\/iptv\/index\.m3u/);
   assert.doesNotMatch(html, /^#EXTM3U/);
 });
 
@@ -70,7 +76,21 @@ test("standalone iptv.html can hydrate local preview placeholders", async () => 
   assert.match(html, /id="source-template"/);
   assert.match(html, /LOCAL_SOURCES/);
   assert.match(html, /hydrateSources/);
+  assert.match(html, /data-upstream-source/);
+  assert.match(html, /iptv-org\/iptv/);
+  assert.match(html, /https:\/\/iptv-org\.github\.io\/iptv\/index\.m3u/);
   assert.doesNotMatch(html, /<ul class="sources" id="source-list">\s*__SOURCE_ITEMS__\s*<\/ul>/);
+});
+
+test("standalone iptv.html keeps the favicon and page logo unified across themes", async () => {
+  const html = await readFile(new URL("../iptv/iptv.html", import.meta.url), "utf8");
+
+  assert.match(html, /--logo-svg:/);
+  assert.match(html, /rel="icon" data-brand-logo="iptv-console"/);
+  assert.match(html, /class="logo" aria-hidden="true" data-brand-logo="iptv-console"/);
+  assert.match(html, /prefers-color-scheme: light/);
+  assert.match(html, /prefers-color-scheme: dark/);
+  assert.match(html, /--surface-glass:/);
 });
 
 test("/sources returns public source metadata", async () => {

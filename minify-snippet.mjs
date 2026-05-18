@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { gzipSync } from "node:zlib";
 
 const repoRoot = dirname(fileURLToPath(import.meta.url));
 const npx = process.platform === "win32" ? "npx.cmd" : "npx";
@@ -61,6 +62,41 @@ export function replaceHomeHtml(source, html, sourceLabel = "snippet source") {
     source.slice(htmlEnd);
 }
 
+export function replaceHomeTemplate(source, html, sourceLabel = "snippet source") {
+  if (source.includes("const HOME_HTML_GZIP_BASE64 = ")) {
+    return replaceCompressedHomeHtml(source, html, sourceLabel);
+  }
+
+  return replaceHomeHtml(source, html, sourceLabel);
+}
+
+export function replaceCompressedHomeHtml(source, html, sourceLabel = "snippet source") {
+  const marker = "const HOME_HTML_GZIP_BASE64 = ";
+  const start = source.indexOf(marker);
+
+  if (start === -1) {
+    throw new Error(`Could not locate HOME_HTML_GZIP_BASE64 in ${sourceLabel}`);
+  }
+
+  const valueStart = start + marker.length;
+  const quote = source[valueStart];
+
+  if (quote !== '"' && quote !== "'") {
+    throw new Error(`Could not locate HOME_HTML_GZIP_BASE64 string in ${sourceLabel}`);
+  }
+
+  const valueEnd = findQuotedStringEnd(source, valueStart, quote);
+
+  if (valueEnd === -1 || source[valueEnd + 1] !== ";") {
+    throw new Error(`Could not locate the end of HOME_HTML_GZIP_BASE64 in ${sourceLabel}`);
+  }
+
+  const encoded = gzipSync(Buffer.from(html, "utf8"), { level: 9 }).toString("base64");
+  return source.slice(0, valueStart) +
+    JSON.stringify(encoded) +
+    source.slice(valueEnd + 1);
+}
+
 export function escapeTemplateLiteral(value) {
   return value
     .replace(/`/g, "\\`")
@@ -90,7 +126,7 @@ export function buildSnippet(config = resolveBuildConfig()) {
   ], config, { capture: true }).trim();
 
   const source = readFileSync(config.sourcePath, "utf8");
-  writeFileSync(config.tempPath, replaceHomeHtml(source, minifiedHtml, config.sourcePath), "utf8");
+  writeFileSync(config.tempPath, replaceHomeTemplate(source, minifiedHtml, config.sourcePath), "utf8");
 
   runNpx([
     "esbuild@0.25.11",
@@ -142,6 +178,16 @@ function quoteCmdArg(value) {
 function findTemplateLiteralEnd(source, start) {
   for (let index = start; index < source.length; index += 1) {
     if (source[index] === "`" && !isEscaped(source, index)) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+function findQuotedStringEnd(source, start, quote) {
+  for (let index = start + 1; index < source.length; index += 1) {
+    if (source[index] === quote && !isEscaped(source, index)) {
       return index;
     }
   }

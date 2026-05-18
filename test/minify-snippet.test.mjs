@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import { gunzipSync } from "node:zlib";
 import { test } from "node:test";
 
 import {
   replaceHomeHtml,
+  replaceHomeTemplate,
   resolveBuildConfig,
 } from "../minify-snippet.mjs";
 
@@ -40,4 +42,22 @@ test("replaceHomeHtml swaps the HOME_HTML template without touching surrounding 
   assert.match(updated, /const before = true;/);
   assert.match(updated, /function renderHomePage/);
   assert.match(updated, /String\.raw`<main>\\` \\\$\{safe\}<\/main>`;/);
+});
+
+test("replaceHomeTemplate swaps a gzip/base64 HOME_HTML_GZIP_BASE64 template", () => {
+  const source = [
+    "const before = true;",
+    'const HOME_HTML_GZIP_BASE64 = "old";',
+    "",
+    "async function decodeHomeHtml() {",
+    "  return HOME_HTML_GZIP_BASE64;",
+    "}",
+  ].join("\n");
+
+  const updated = replaceHomeTemplate(source, "<main>IPTV</main>", "iptv-snippet.js");
+  const encoded = updated.match(/HOME_HTML_GZIP_BASE64 = "([^"]+)"/)[1];
+  const decoded = gunzipSync(Buffer.from(encoded, "base64")).toString("utf8");
+
+  assert.match(updated, /const before = true;/);
+  assert.equal(decoded, "<main>IPTV</main>");
 });
