@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { gunzipSync } from "node:zlib";
 import { test } from "node:test";
 
@@ -60,4 +61,10 @@ test("replaceHomeTemplate swaps a gzip/base64 HOME_HTML_GZIP_BASE64 template", (
 
   assert.match(updated, /const before = true;/);
   assert.equal(decoded, "<main>IPTV</main>");
+});
+
+test("github snippet source keeps the compressed home template marker for repeatable builds", async () => {
+  const source = await readFile(new URL("../github/github-snippet.js", import.meta.url), "utf8");
+
+  assert.match(source, /const HOME_HTML_GZIP_BASE64 = ['"]/);
 });
