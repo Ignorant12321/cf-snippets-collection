@@ -162,8 +162,8 @@ ip/ip-snippet.min.js
 当前压缩结果约为：
 
 ```text
-Original: 47,269 bytes
-Minified: 29,298 bytes
+Original: 49,961 bytes
+Minified: 31,122 bytes
 Limit:    32,768 bytes
 ```
 

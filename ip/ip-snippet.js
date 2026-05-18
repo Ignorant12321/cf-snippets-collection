@@ -755,6 +755,13 @@ const HOME_HTML = String.raw`<!doctype html>
       gap: 8px;
     }
 
+    .top-action {
+      width: 48px;
+      height: 48px;
+      min-height: 48px;
+      font-size: 21px;
+    }
+
     .chip,
     .icon-button {
       min-height: 38px;
@@ -778,11 +785,19 @@ const HOME_HTML = String.raw`<!doctype html>
       transform: translateY(-1px);
     }
 
+    .icon-button.done {
+      border-color: rgba(116, 211, 132, .72);
+      color: #061413;
+      background: var(--green);
+      box-shadow: 0 0 0 3px rgba(116, 211, 132, .18);
+    }
+
     .dashboard {
       display: grid;
       grid-template-columns: minmax(0, 1.25fr) minmax(360px, .86fr);
       gap: 14px;
       align-content: start;
+      align-items: stretch;
     }
 
     .main-stack,
@@ -792,22 +807,40 @@ const HOME_HTML = String.raw`<!doctype html>
       min-width: 0;
     }
 
+    .main-stack {
+      grid-template-rows: auto auto 1fr;
+    }
+
     .side-stack {
-      align-content: start;
-      align-items: start;
+      height: 100%;
+      grid-template-rows: minmax(280px, 1fr) auto;
+      align-content: stretch;
+      align-items: stretch;
     }
 
     .panel {
       border-radius: 8px;
       padding: 18px;
       min-width: 0;
+      overflow: hidden;
     }
 
     .query-panel {
+      position: relative;
       display: grid;
       grid-template-columns: minmax(0, 1fr);
       gap: 16px;
       align-items: stretch;
+      background: linear-gradient(155deg, rgba(16, 32, 40, .98), rgba(12, 22, 28, .96));
+    }
+
+    .query-panel::after {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 2px;
+      background: linear-gradient(90deg, var(--cyan), transparent);
+      opacity: .72;
     }
 
     .label {
@@ -828,7 +861,7 @@ const HOME_HTML = String.raw`<!doctype html>
 
     .ip-value {
       font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
-      font-size: clamp(30px, 5vw, 58px);
+      font-size: clamp(32px, 3.6rem, 58px);
       line-height: 1.04;
       word-break: break-word;
     }
@@ -1001,12 +1034,12 @@ const HOME_HTML = String.raw`<!doctype html>
 
     .map-box {
       position: absolute;
-      inset: 88px 14px 14px;
+      inset: 76px 14px 14px;
       z-index: 1;
       border: 1px solid rgba(85,214,194,.25);
       border-radius: 8px;
       background:
-        radial-gradient(circle at 30% 45%, rgba(85,214,194,.9) 0 4px, transparent 5px),
+        linear-gradient(rgba(13,25,31,.78), rgba(13,25,31,.78)),
         linear-gradient(135deg, transparent 48%, rgba(85,214,194,.24) 49% 51%, transparent 52%),
         linear-gradient(45deg, transparent 48%, rgba(85,214,194,.16) 49% 51%, transparent 52%);
       background-size: auto, 28px 28px, 28px 28px;
@@ -1101,6 +1134,12 @@ const HOME_HTML = String.raw`<!doctype html>
       gap: 10px;
     }
 
+    .external-panel {
+      display: grid;
+      align-content: start;
+      background: linear-gradient(155deg, rgba(17, 30, 36, .96), rgba(12, 22, 28, .94));
+    }
+
     .jump-link {
       min-height: 58px;
       border: 1px solid rgba(255,255,255,.12);
@@ -1144,6 +1183,12 @@ const HOME_HTML = String.raw`<!doctype html>
         grid-template-columns: 1fr;
       }
 
+      .main-stack,
+      .side-stack {
+        grid-template-rows: auto;
+        height: auto;
+      }
+
       .risk-compact {
         border-left: 0;
         border-top: 1px solid var(--line);
@@ -1168,6 +1213,18 @@ const HOME_HTML = String.raw`<!doctype html>
         width: 100%;
       }
 
+      .actions {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .top-action {
+        width: 100%;
+        height: 42px;
+        min-height: 42px;
+        font-size: 18px;
+      }
+
       .chip {
         flex: 1 1 auto;
         text-align: center;
@@ -1176,6 +1233,10 @@ const HOME_HTML = String.raw`<!doctype html>
       .row {
         grid-template-columns: 1fr;
         gap: 4px;
+      }
+
+      .location-card {
+        min-height: 320px;
       }
 
       .jump-grid,
@@ -1196,10 +1257,10 @@ const HOME_HTML = String.raw`<!doctype html>
         </div>
       </div>
       <div class="actions">
-        <button class="chip" type="button" data-action="refresh">刷新</button>
-        <button class="chip" type="button" data-action="copy-ip">复制IP</button>
-        <button class="chip" type="button" data-action="export-image">图片</button>
-        <button class="chip" type="button" data-action="copy-report">Report</button>
+        <button class="icon-button top-action" type="button" data-action="refresh" aria-label="刷新" title="刷新">↻</button>
+        <button class="icon-button top-action" type="button" data-action="copy-ip" aria-label="复制IP" title="复制IP">⧉</button>
+        <button class="icon-button top-action" type="button" data-action="export-image" aria-label="导出图片" title="导出图片">▧</button>
+        <button class="icon-button top-action" type="button" data-action="copy-report" aria-label="复制报告" title="复制报告">☰</button>
       </div>
     </header>
 
@@ -1235,7 +1296,7 @@ const HOME_HTML = String.raw`<!doctype html>
           <div class="row"><span>经纬度</span><strong data-field="coords">--</strong></div>
         </section>
 
-        <section class="panel">
+        <section class="panel external-panel">
           <div class="label">外部查询</div>
           <div class="jump-grid" data-field="jumpLinks">
             <a class="jump-link" data-jump="ping0" href="https://ping0.cc/ip/" target="_blank" rel="noopener noreferrer">
@@ -1473,24 +1534,35 @@ const HOME_HTML = String.raw`<!doctype html>
       if (show) targetInput.focus();
     }
 
-    async function copyText(text, label = "已复制") {
+    function markActionDone(button) {
+      if (!button) return;
+      const old = button.dataset.icon || button.textContent;
+      button.dataset.icon = old;
+      clearTimeout(button.doneTimer);
+      button.classList.add("done");
+      button.textContent = "✓";
+      button.doneTimer = setTimeout(() => {
+        button.classList.remove("done");
+        button.textContent = button.dataset.icon || old;
+      }, 1800);
+    }
+
+    async function copyText(text, button) {
       await navigator.clipboard.writeText(text);
-      const button = document.querySelector("[data-action='copy-ip']");
-      const old = button.textContent;
-      button.textContent = label;
-      setTimeout(() => button.textContent = old, 1100);
+      markActionDone(button);
     }
 
     document.addEventListener("click", (event) => {
-      const action = event.target.closest("[data-action]")?.dataset.action;
+      const button = event.target.closest("[data-action]");
+      const action = button?.dataset.action;
       if (!action) return;
 
       if (action === "refresh") load(state.currentTarget || "");
-      if (action === "refresh-location") load(state.currentTarget || "").then((data) => renderMap(data || state.data));
+      if (action === "refresh-location") renderMap(state.data);
       if (action === "edit-target") showEdit(true);
       if (action === "cancel-edit") showEdit(false);
-      if (action === "copy-ip" && state.data) copyText(state.data.network.ip, "IP已复制");
-      if (action === "export-image" && state.data) downloadReportImage();
+      if (action === "copy-ip" && state.data) copyText(state.data.network.ip, button);
+      if (action === "export-image" && state.data) downloadReportImage(button);
       if (action === "copy-report" && state.data) {
         copyText([
           "Endpoint: " + state.lastEndpoint,
@@ -1498,7 +1570,7 @@ const HOME_HTML = String.raw`<!doctype html>
           "Location: " + fields.location.textContent,
           "ASN: " + fields.asn.textContent,
           "Risk: " + fields.riskScore.textContent,
-        ].join("\n"), "报告已复制");
+        ].join("\n"), button);
       }
     });
 
@@ -1515,7 +1587,7 @@ const HOME_HTML = String.raw`<!doctype html>
     resetMap();
     load(getInitialTarget());
 
-    function downloadReportImage() {
+    function downloadReportImage(button) {
       const width = 1200;
       const height = 720;
       const canvas = document.createElement("canvas");
@@ -1529,27 +1601,34 @@ const HOME_HTML = String.raw`<!doctype html>
       for (let x = 0; x < width; x += 36) line(ctx, x, 0, x, height);
       for (let y = 0; y < height; y += 36) line(ctx, 0, y, width, y);
       drawPanel(ctx, 34, 34, 1132, 652);
-      text(ctx, "IP 检测报告", 72, 92, 32, "#eef7f6", "700");
-      text(ctx, state.data.network.ip || "--", 72, 158, 54, "#eef7f6", "700", "monospace");
-      text(ctx, "风险分", 820, 114, 18, "#8ea1a8");
-      text(ctx, fields.riskScore.textContent, 820, 178, 64, "#e7c766", "800");
-      drawMeter(ctx, 820, 210, 250, 16, Number(fields.riskScore.textContent) || 0);
+      drawBadge(ctx, 72, 64, 52);
+      text(ctx, "IP 检测", 144, 88, 30, "#eef7f6", "800");
+      text(ctx, "公网地址、网络归属与 proxycheck.io 风控情报", 144, 122, 18, "#8ea1a8");
+      text(ctx, state.data.network.ip || "--", 72, 186, 54, "#eef7f6", "800", "monospace");
+      drawCard(ctx, 760, 76, 330, 132);
+      text(ctx, "风险评估", 790, 116, 18, "#8ea1a8");
+      text(ctx, fields.riskScore.textContent, 980, 158, 58, "#e7c766", "800");
+      drawMeter(ctx, 790, 174, 250, 14, Number(fields.riskScore.textContent) || 0);
+      drawCard(ctx, 54, 220, 508, 118);
+      drawCard(ctx, 588, 220, 508, 118);
+      drawCard(ctx, 54, 362, 508, 118);
+      drawCard(ctx, 588, 362, 508, 118);
       const rows = [
-        ["位置", fields.location.textContent],
-        ["ASN", fields.asn.textContent],
-        ["类型", fields.netType.textContent],
-        ["检测", getDetectionLine(state.data.risk || {}) || "无命中"],
+        ["网络位置", fields.location.textContent, 84, 264],
+        ["ASN/运营商", fields.asn.textContent, 618, 264],
+        ["公网地址", fields.netType.textContent, 84, 406],
+        ["检测命中", getDetectionLine(state.data.risk || {}) || "无命中", 618, 406],
       ];
-      rows.forEach(([label, value], index) => {
-        const y = 268 + index * 54;
-        text(ctx, label, 72, y, 18, "#8ea1a8");
-        text(ctx, value || "--", 190, y, 22, "#eef7f6", "600");
+      rows.forEach(([label, value, x, y]) => {
+        text(ctx, label, x, y, 17, "#8ea1a8");
+        text(ctx, value || "--", x, y + 42, 24, "#eef7f6", "700");
       });
       text(ctx, "Generated " + new Date().toISOString(), 72, 642, 15, "#8ea1a8");
       const link = document.createElement("a");
       link.download = "ip-report-" + (state.data.network.ip || "target").replace(/[^a-z0-9.-]/gi, "_") + ".png";
       link.href = canvas.toDataURL("image/png");
       link.click();
+      markActionDone(button);
     }
 
     function drawPanel(ctx, x, y, width, height) {
@@ -1559,6 +1638,23 @@ const HOME_HTML = String.raw`<!doctype html>
       ctx.roundRect(x, y, width, height, 14);
       ctx.fill();
       ctx.stroke();
+    }
+
+    function drawCard(ctx, x, y, width, height) {
+      ctx.fillStyle = "rgba(255,255,255,.045)";
+      ctx.strokeStyle = "rgba(255,255,255,.1)";
+      ctx.beginPath();
+      ctx.roundRect(x, y, width, height, 8);
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    function drawBadge(ctx, x, y, size) {
+      ctx.fillStyle = "#55d6c2";
+      ctx.beginPath();
+      ctx.roundRect(x, y, size, size, 8);
+      ctx.fill();
+      text(ctx, "IP", x + 12, y + 35, 22, "#061413", "900");
     }
 
     function drawMeter(ctx, x, y, width, height, score) {
