@@ -1,62 +1,62 @@
-# GitHub Proxy Home UI Refresh Design
+# GitHub 代理首页 UI 刷新设计
 
-## Goal
+## 目标
 
-Refresh the `github` home page into a cleaner productivity console while preserving a restrained GitHub-flavored dark interface. The page should make the primary conversion workflow obvious: paste a GitHub-related URL, inspect the generated proxy URL, and open it.
+把 `github` 首页改成更干净的效率面板，同时保留克制的 GitHub 暗色气质。页面需要让核心流程一眼可见：粘贴 GitHub 相关链接，查看生成的代理链接，然后打开它。
 
-## Design Direction
+## 设计方向
 
-Use a "tool bench first, GitHub flavor second" approach:
+采用“工具台优先，GitHub 风味其次”的思路：
 
-- Keep the dark theme, crisp borders, monospace URL details, and small green/cyan accents.
-- Reduce decorative weight so the UI feels faster, calmer, and more practical.
-- Make the input, generated output, and open action the visual center of the page.
-- Keep the current single-file HTML/CSS/JS structure and existing behavior.
+- 保留暗色主题、清晰边框、网址的等宽字体细节，以及少量绿色/青色点缀。
+- 降低装饰感，让界面更快、更稳、更像实用工具。
+- 把输入、输出和打开动作放到视觉中心。
+- 保持现有的单文件 HTML/CSS/JS 结构和功能不变。
 
-## Layout
+## 布局
 
-The page uses three major zones:
+页面分成三个主要区域：
 
-1. Header console
-   - Compact title and status metadata in one horizontal control bar.
-   - Statistics remain visible but quieter: entry host, base host, and whitelist count.
+1. 顶部控制栏
+   - 标题和状态信息收进一条紧凑横栏。
+   - 入口域名、基础域名、白名单数量等统计保留，但更安静。
 
-2. Conversion workspace
-   - Main input/output form takes the largest area.
-   - Example buttons sit close to the input as quick presets.
-   - The generated proxy URL appears in a clear read-only output row.
-   - The primary open button is visually distinct but not oversized.
-   - Parse details move into a compact side panel with source host, proxy host, path, history count, mirror count, and protocol.
+2. 转换工作区
+   - 主输入/输出表单占最大面积。
+   - 示例按钮贴近输入框，作为快捷预设。
+   - 生成的代理链接放在清晰的只读输出行里。
+   - 主打开按钮保持明确，但不做得过大。
+   - 解析详情收进右侧紧凑面板，展示源域名、代理域名、路径、历史数量、镜像数量和协议。
 
-3. Work tabs
-   - History, mirror recommendations, and whitelist stay in tabs.
-   - History cards become denser and easier to scan.
-   - Mirror cards and whitelist table keep the same data but use cleaner spacing.
+3. 工作标签页
+   - 历史、镜像推荐、白名单保留为标签页。
+   - 历史卡片更紧凑，更容易扫读。
+   - 镜像卡片和白名单表格保留数据，但间距更克制。
 
-## Visual Rules
+## 视觉规则
 
-- Background should be mostly flat dark with a subtle grid or texture.
-- Avoid heavy gradients and large decorative blocks.
-- Use one accent color for primary actions and a second accent only for generated URL/status details.
-- Keep border radius at 8px or less.
-- Use compact controls with stable heights so the layout does not shift while typing.
-- Preserve readable Chinese labels and monospace treatment for URLs/domains.
+- 背景以平面暗色为主，配轻微网格或纹理。
+- 避免大面积渐变和大块装饰。
+- 主操作只用一个强调色，生成链接和状态细节再用第二个强调色。
+- 圆角控制在 8px 或以下。
+- 控件高度保持稳定，输入时布局不应跳动。
+- 保持中文标签可读，网址和域名继续使用等宽字体。
 
-## Responsive Behavior
+## 响应式行为
 
-- Desktop: two-column conversion workspace, with form on the left and parse summary on the right.
-- Mobile: single-column stack, title/status first, then form, parse summary, and tabs.
-- Buttons and URL fields must not overflow narrow screens.
+- 桌面端：转换工作区采用双栏，左侧表单，右侧解析摘要。
+- 移动端：单列堆叠，先标题和状态，再表单、解析摘要和标签页。
+- 按钮和输入框在窄屏上不能溢出。
 
-## Non-Goals
+## 非目标
 
-- Do not change proxy behavior, whitelist data, mirror data, localStorage keys, or `/go` form behavior.
-- Do not introduce external assets, build tooling, or a framework.
-- Do not enlarge the Cloudflare snippet logic beyond what is necessary to embed the refreshed HTML.
+- 不修改代理行为、白名单数据、镜像数据、`localStorage` 键名或 `/go` 表单行为。
+- 不引入外部资源、构建工具或框架。
+- 不扩张 Cloudflare snippet 逻辑，除了嵌入刷新后的 HTML 之外不加额外复杂度。
 
-## Acceptance Criteria
+## 验收标准
 
-- The primary workflow is visually obvious within the first viewport.
-- Existing examples, validation, generated URL, open actions, tabs, search, history, and clearing behavior still work.
-- The page looks cleaner and more efficient than the current version while still feeling related to GitHub tooling.
-- The layout is usable on desktop and mobile widths.
+- 首屏一眼能看出主流程。
+- 现有示例、校验、生成链接、打开、标签页、搜索、历史和清空功能全部保留。
+- 页面比当前版本更干净、更像效率工具，同时还能看出 GitHub 工具的气质。
+- 在桌面和移动宽度下都能正常使用。
